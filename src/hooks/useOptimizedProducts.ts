@@ -49,7 +49,7 @@ export const useOptimizedProductSearch = (companyId?: string, enabled: boolean =
             category_id
           `)
           .eq('company_id', companyId)
-          .eq('is_active', true);
+          .eq('status', 'active');
 
         // Add search filter if search term exists
         if (debouncedSearchTerm.trim()) {
@@ -160,7 +160,7 @@ export const usePopularProducts = (companyId?: string, limit: number = 20) => {
             category_id
           `)
           .eq('company_id', companyId)
-          .eq('is_active', true)
+          .eq('status', 'active')
           .order('stock_quantity', { ascending: false })
           .order('name')
           .limit(limit);
@@ -387,7 +387,7 @@ export const useInventoryStats = (companyId?: string) => {
           .from('products')
           .select('stock_quantity, minimum_stock_level, selling_price')
           .eq('company_id', companyId)
-          .eq('is_active', true);
+          .eq('status', 'active');
 
         if (error) {
           console.error('Error fetching inventory stats:', error);
