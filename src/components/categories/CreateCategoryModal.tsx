@@ -65,7 +65,6 @@ export function CreateCategoryModal({ open, onOpenChange, onSuccess }: CreateCat
         .from('product_categories')
         .select('id, name, parent_id')
         .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
         .order('sort_order', { ascending: true });
 
       if (error) throw error;

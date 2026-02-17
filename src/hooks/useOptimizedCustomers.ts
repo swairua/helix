@@ -83,9 +83,9 @@ export const useOptimizedCustomers = (
 
       // Apply status filter
       if (statusFilter === 'active') {
-        query = query.eq('is_active', true);
+        query = query.eq('status', 'active');
       } else if (statusFilter === 'inactive') {
-        query = query.eq('is_active', false);
+        query = query.eq('status', 'inactive');
       }
 
       // Apply city filter

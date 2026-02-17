@@ -87,7 +87,6 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
       const { data, error } = await supabase
         .from('product_categories')
         .select('id, name, description')
-        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
