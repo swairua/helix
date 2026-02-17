@@ -14,7 +14,7 @@
 
 /**
  * Get API URL for client-side (browser) code
- * Uses intelligent detection: relative URL for prod, full URL for dev
+ * Uses intelligent detection: explicit URL > production relative > dev detection
  */
 export function getClientApiUrl(): string {
   // If explicit env var is set, use it (highest priority)
@@ -28,13 +28,11 @@ export function getClientApiUrl(): string {
     return '/api.php';
   }
 
-  // Development mode: use full URL from getAPIBaseURL() from environment detection
-  // This is already handled by src/utils/environment-detection.ts
-  // This function is just for explicit usage when needed
-  const fullUrl = typeof window !== 'undefined' 
+  // Development mode: use full URL with current hostname
+  const fullUrl = typeof window !== 'undefined'
     ? `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/api.php`
     : 'https://helixgeneralhardware.com/api.php'; // Fallback for SSR
-  
+
   return fullUrl;
 }
 
