@@ -149,7 +149,12 @@ export const ViewDeliveryNoteModal = ({
   };
 
   const handleDownload = () => {
-    onDownloadPDF?.(deliveryNote);
+    // Pass delivery note with fetched items to PDF download
+    const deliveryNoteWithItems = {
+      ...deliveryNote,
+      delivery_note_items: itemsToDisplay
+    };
+    onDownloadPDF?.(deliveryNoteWithItems);
   };
 
   const handleSendEmail = () => {
