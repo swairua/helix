@@ -92,7 +92,7 @@ export function EditInventoryItemModal({ open, onOpenChange, onSuccess, item }: 
   const { currentCompany } = useCurrentCompany();
 
   // Load units of measure from database
-  const { data: units, isLoading: unitsLoading, refetch: refetchUnits } = useUnitsOfMeasure(currentCompany?.id);
+  const { data: units, isLoading: unitsLoading, retry: retryUnits } = useUnitsOfMeasure(currentCompany?.id);
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['product_categories'],
@@ -162,7 +162,7 @@ export function EditInventoryItemModal({ open, onOpenChange, onSuccess, item }: 
       setShowCreateUnit(false);
 
       // Refresh units list and select the newly created unit
-      await refetchUnits();
+      retryUnits();
       // The newly created unit should be selected automatically when data updates
       handleInputChange('unit_of_measure', newUnitName.trim());
     } catch (error) {
