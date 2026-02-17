@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { mapDeliveryNoteForDisplay } from '@/utils/deliveryNoteMapper';
+import { useDatabase } from '@/hooks/useDatabase';
 import {
   Truck,
   Download,
@@ -72,9 +74,44 @@ export const ViewDeliveryNoteModal = ({
   onSendEmail,
   onMarkDelivered
 }: ViewDeliveryNoteModalProps) => {
+  const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const { db } = useDatabase();
+
+  // Fetch delivery note items when modal opens with a delivery note
+  useEffect(() => {
+    async function fetchDeliveryItems() {
+      if (!deliveryNote?.id || !open) return;
+
+      try {
+        setItemsLoading(true);
+        const result = await db.select('delivery_note_items', {
+          delivery_note_id: deliveryNote.id
+        });
+
+        if (!result.error && Array.isArray(result.data)) {
+          setDeliveryItems(result.data);
+          console.log('[ViewDeliveryNoteModal] Loaded delivery items:', result.data);
+        } else {
+          console.warn('[ViewDeliveryNoteModal] Error loading delivery items:', result.error);
+          setDeliveryItems([]);
+        }
+      } catch (error) {
+        console.error('[ViewDeliveryNoteModal] Error fetching delivery items:', error);
+        setDeliveryItems([]);
+      } finally {
+        setItemsLoading(false);
+      }
+    }
+
+    fetchDeliveryItems();
+  }, [deliveryNote?.id, open, db]);
+
   if (!deliveryNote) return null;
 
   const mappedDeliveryNote = mapDeliveryNoteForDisplay(deliveryNote);
+  // Use fetched items if available, otherwise fall back to deliveryNote.delivery_items
+  const itemsToDisplay = deliveryItems.length > 0 ? deliveryItems : (deliveryNote.delivery_items || []);
   const noteNumber = mappedDeliveryNote.delivery_note_number || mappedDeliveryNote.delivery_number;
 
   const getStatusBadge = (status: string) => {
@@ -123,8 +160,8 @@ export const ViewDeliveryNoteModal = ({
     onMarkDelivered?.(deliveryNote);
   };
 
-  const totalItemsOrdered = deliveryNote.delivery_items?.reduce((sum, item) => sum + item.quantity_ordered, 0) || 0;
-  const totalItemsDelivered = deliveryNote.delivery_items?.reduce((sum, item) => sum + item.quantity_delivered, 0) || 0;
+  const totalItemsOrdered = itemsToDisplay?.reduce((sum, item) => sum + item.quantity_ordered, 0) || 0;
+  const totalItemsDelivered = itemsToDisplay?.reduce((sum, item) => sum + item.quantity_delivered, 0) || 0;
   const isPartialDelivery = totalItemsDelivered < totalItemsOrdered;
 
   return (
@@ -248,7 +285,16 @@ export const ViewDeliveryNoteModal = ({
           </div>
 
           {/* Items */}
-          {mappedDeliveryNote.delivery_items && mappedDeliveryNote.delivery_items.length > 0 && (
+          {itemsLoading ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Items for Delivery</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Loading delivery items...</p>
+              </CardContent>
+            </Card>
+          ) : itemsToDisplay && itemsToDisplay.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Items for Delivery</CardTitle>
@@ -266,17 +312,17 @@ export const ViewDeliveryNoteModal = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mappedDeliveryNote.delivery_items.map((item) => {
+                    {itemsToDisplay.map((item) => {
                       const isFullyDelivered = item.quantity_delivered >= item.quantity_ordered;
                       const isPartiallyDelivered = item.quantity_delivered > 0 && item.quantity_delivered < item.quantity_ordered;
-                      
+
                       return (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.product_name}</TableCell>
                           <TableCell>{item.description}</TableCell>
                           <TableCell>{item.quantity_ordered}</TableCell>
                           <TableCell className={
-                            isFullyDelivered ? 'text-success' : 
+                            isFullyDelivered ? 'text-success' :
                             isPartiallyDelivered ? 'text-warning' : 'text-muted-foreground'
                           }>
                             {item.quantity_delivered}
@@ -305,6 +351,15 @@ export const ViewDeliveryNoteModal = ({
                     })}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Items for Delivery</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">No delivery items found for this delivery note.</p>
               </CardContent>
             </Card>
           )}
