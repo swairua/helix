@@ -65,7 +65,8 @@ $db_pass = 'Sirgeorge.12';
 $db_name = 'layonsc1_med';
 
 // Uploads Configuration
-$UPLOADS_DIR = '/home/layonsc1/helixgeneralhardware.com/uploads';
+// Use relative path to work on any server regardless of absolute file paths
+$UPLOADS_DIR = dirname(__FILE__) . '/uploads';
 
 // Validate required database configuration
 if (!$db_host || !$db_user || !$db_pass || !$db_name) {
