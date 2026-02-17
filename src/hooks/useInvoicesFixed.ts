@@ -48,22 +48,42 @@ export const useInvoicesFixed = (companyId?: string) => {
         console.log('[useInvoicesFixed] First invoice sample:', invoices[0]);
 
         // Try to fetch customer data
-        const customerIds = [...new Set(invoices.map((invoice: any) => invoice.customer_id).filter(id => id && typeof id === 'string'))];
-        console.log('[useInvoicesFixed] Unique customer IDs found:', customerIds.length, customerIds);
+        // Normalize customer IDs to strings for consistent lookup
+        const rawCustomerIds = invoices.map((invoice: any) => invoice.customer_id).filter(id => id);
+        console.log('[useInvoicesFixed] Raw customer IDs found:', rawCustomerIds);
+        console.log('[useInvoicesFixed] Raw customer ID types:', rawCustomerIds.map(id => ({ id, type: typeof id })));
+
+        const customerIds = [...new Set(rawCustomerIds.map(id => String(id)))];
+        console.log('[useInvoicesFixed] Normalized unique customer IDs:', customerIds.length, customerIds);
 
         let customerMap = new Map();
 
         if (customerIds.length > 0) {
           try {
-            // Fetch customers
-            for (const customerId of customerIds) {
-              const { data: customer, error: customerError } = await apiClient.selectOne('customers', customerId);
-              console.log(`[useInvoicesFixed] Fetched customer ${customerId} - Error:`, customerError, 'Data:', customer);
-              if (!customerError && customer) {
+            // Fetch all customers at once to improve performance
+            console.log('[useInvoicesFixed] Fetching all customers...');
+            const { data: allCustomers, error: customersError } = await apiClient.select('customers', {});
+
+            if (customersError) {
+              console.warn('[useInvoicesFixed] Error fetching customers:', customersError);
+            } else if (Array.isArray(allCustomers)) {
+              console.log('[useInvoicesFixed] Fetched', allCustomers.length, 'customers from API');
+
+              // Create a map of all customers by ID
+              allCustomers.forEach((customer: any) => {
+                const customerId = String(customer.id);
                 customerMap.set(customerId, customer);
+                console.log(`[useInvoicesFixed] Mapped customer: ${customerId} -> ${customer.name}`);
+              });
+
+              console.log('[useInvoicesFixed] Customer map created with', customerMap.size, 'entries');
+
+              // Log missing customers
+              const missingCustomers = customerIds.filter(id => !customerMap.has(id));
+              if (missingCustomers.length > 0) {
+                console.warn('[useInvoicesFixed] Warning: These customer IDs were not found:', missingCustomers);
               }
             }
-            console.log('[useInvoicesFixed] Customer map size after fetching:', customerMap.size);
           } catch (e) {
             console.warn('[useInvoicesFixed] Could not fetch customer details (non-fatal):', e);
           }
@@ -103,19 +123,32 @@ export const useInvoicesFixed = (companyId?: string) => {
           }
         }
 
-        // Combine data
-        const enrichedInvoices = invoices.map((invoice: any) => ({
-          ...invoice,
-          customers: customerMap.get(invoice.customer_id) || {
-            name: 'Unknown Customer',
-            email: null,
-            phone: null
-          },
-          invoice_items: itemsMap.get(invoice.id) || []
-        }));
+        // Combine data - Normalize customer ID lookup to string
+        const enrichedInvoices = invoices.map((invoice: any) => {
+          // Normalize customer ID to string for consistent lookup
+          const normalizedCustomerId = String(invoice.customer_id);
+          const customer = customerMap.get(normalizedCustomerId);
+
+          console.log(`[useInvoicesFixed] Enriching invoice ${invoice.invoice_number}:`, {
+            customerId: invoice.customer_id,
+            normalizedId: normalizedCustomerId,
+            customerFound: !!customer,
+            customerName: customer?.name || 'Unknown Customer'
+          });
+
+          return {
+            ...invoice,
+            customers: customer || {
+              name: 'Unknown Customer',
+              email: null,
+              phone: null
+            },
+            invoice_items: itemsMap.get(invoice.id) || []
+          };
+        });
 
         console.log('[useInvoicesFixed] Enrichment complete - Invoices with items:', enrichedInvoices.filter((inv: any) => inv.invoice_items.length > 0).length);
-        console.log('[useInvoicesFixed] Final enriched invoices sample:', enrichedInvoices.slice(0, 2));
+        console.log('[useInvoicesFixed] Final enriched invoices:', enrichedInvoices.map((inv: any) => ({ number: inv.invoice_number, customer: inv.customers?.name })));
         return enrichedInvoices;
 
       } catch (error) {
