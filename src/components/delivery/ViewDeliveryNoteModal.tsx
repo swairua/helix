@@ -85,15 +85,25 @@ export const ViewDeliveryNoteModal = ({
 
       try {
         setItemsLoading(true);
-        const result = await db.select('delivery_note_items', {
-          delivery_note_id: deliveryNote.id
+        // Use direct API call to fetch delivery items, similar to PDF generation
+        const response = await fetch(`/api.php?action=read&table=delivery_note_items&where={"delivery_note_id":"${deliveryNote.id}"}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('med_api_token') || ''}`
+          }
         });
 
-        if (!result.error && Array.isArray(result.data)) {
-          setDeliveryItems(result.data);
-          console.log('[ViewDeliveryNoteModal] Loaded delivery items:', result.data);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.status === 'success' && Array.isArray(result.data)) {
+            setDeliveryItems(result.data);
+            console.log('[ViewDeliveryNoteModal] Loaded delivery items:', result.data);
+          } else {
+            console.warn('[ViewDeliveryNoteModal] Error loading delivery items:', result.message);
+            setDeliveryItems([]);
+          }
         } else {
-          console.warn('[ViewDeliveryNoteModal] Error loading delivery items:', result.error);
+          console.warn('[ViewDeliveryNoteModal] HTTP error:', response.status);
           setDeliveryItems([]);
         }
       } catch (error) {
@@ -105,7 +115,7 @@ export const ViewDeliveryNoteModal = ({
     }
 
     fetchDeliveryItems();
-  }, [deliveryNote?.id, open, db]);
+  }, [deliveryNote?.id, open]);
 
   if (!deliveryNote) return null;
 
