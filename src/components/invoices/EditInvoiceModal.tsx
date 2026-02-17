@@ -208,22 +208,24 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
     const price = unitPrice ?? item.unit_price;
     const discount = discountPercentage ?? item.discount_percentage;
     const tax = taxPercentage ?? item.tax_percentage;
+    const inclusive = taxInclusive ?? item.tax_inclusive;
 
-    let subtotal = qty * price;
-    let discountAmount = subtotal * (discount / 100);
-    let afterDiscount = subtotal - discountAmount;
+    // Calculate base amount after discount
+    const baseAmount = qty * price;
+    const discountAmount = baseAmount * (discount / 100);
+    const afterDiscountAmount = baseAmount - discountAmount;
 
     let taxAmount = 0;
     let lineTotal = 0;
 
-    if (tax === 0) {
-      // No VAT applied
-      lineTotal = afterDiscount;
+    if (tax === 0 || !inclusive) {
+      // No tax or tax checkbox unchecked
+      lineTotal = afterDiscountAmount;
       taxAmount = 0;
     } else {
-      // Both inclusive and exclusive now add VAT on top
-      taxAmount = afterDiscount * (tax / 100);
-      lineTotal = afterDiscount + taxAmount;
+      // Tax checkbox checked: add tax to the discounted amount
+      taxAmount = afterDiscountAmount * (tax / 100);
+      lineTotal = afterDiscountAmount + taxAmount;
     }
 
     return { lineTotal, taxAmount };
