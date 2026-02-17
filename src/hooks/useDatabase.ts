@@ -479,15 +479,90 @@ export function usePayments(companyId?: string) {
 }
 
 /**
- * Hook to get delivery notes
+ * Hook to get delivery notes with related invoice data
+ * Fetches delivery notes and enriches them with invoice information
  * @param companyId - Optional company ID for filtering
  */
 export function useDeliveryNotes(companyId?: string) {
-  const filter = useMemo(() =>
-    companyId ? { company_id: companyId } : undefined,
-    [companyId]
-  );
-  return useSelect('delivery_notes', filter);
+  const [data, setData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const { db } = useDatabase();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchDeliveryNotesWithInvoices() {
+      try {
+        if (isMounted) {
+          setIsLoading(true);
+        }
+
+        // Step 1: Fetch delivery notes
+        const filter = companyId ? { company_id: companyId } : undefined;
+        const deliveryNotesResult = await db.select<any>('delivery_notes', filter);
+
+        if (deliveryNotesResult.error) {
+          throw deliveryNotesResult.error;
+        }
+
+        const deliveryNotes = deliveryNotesResult.data || [];
+
+        // Step 2: Fetch all invoices to create a map for quick lookup
+        const invoicesResult = await db.select<any>('invoices', companyId ? { company_id: companyId } : undefined);
+        const invoiceMap = new Map();
+
+        if (invoicesResult.data) {
+          invoicesResult.data.forEach((invoice: any) => {
+            invoiceMap.set(invoice.id, invoice);
+          });
+        }
+
+        // Step 3: Enrich delivery notes with invoice data
+        const enrichedDeliveryNotes = deliveryNotes.map((note: any) => {
+          if (note.invoice_id && invoiceMap.has(note.invoice_id)) {
+            return {
+              ...note,
+              invoices: invoiceMap.get(note.invoice_id),
+              invoice_number: invoiceMap.get(note.invoice_id)?.invoice_number
+            };
+          }
+          return note;
+        });
+
+        if (isMounted) {
+          setData(enrichedDeliveryNotes);
+          setError(null);
+        }
+      } catch (err) {
+        const error = err as Error;
+        console.error('[useDeliveryNotes] Error fetching delivery notes:', error);
+
+        if (isMounted) {
+          setError(error);
+          setData([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchDeliveryNotesWithInvoices();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [db, companyId, retryCount]);
+
+  const retry = () => {
+    setRetryCount(prev => prev + 1);
+  };
+
+  return { data, isLoading, error, retry };
 }
 
 /**

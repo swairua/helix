@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCreateProduct, useDatabase } from '@/hooks/useDatabase';
+import { useCreateProduct, useDatabase, useUnitsOfMeasure, useCreateUnitOfMeasure } from '@/hooks/useDatabase';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
@@ -34,22 +34,6 @@ import {
 import { toast } from 'sonner';
 import { CreateCategoryModalBasic } from '@/components/categories/CreateCategoryModalBasic';
 
-// Standard units of measure - no database lookup needed
-const STANDARD_UNITS = [
-  { value: 'pieces', label: 'Pieces' },
-  { value: 'box', label: 'Box' },
-  { value: 'kg', label: 'Kilogram (kg)' },
-  { value: 'g', label: 'Gram (g)' },
-  { value: 'liter', label: 'Liter (L)' },
-  { value: 'ml', label: 'Milliliter (ml)' },
-  { value: 'meter', label: 'Meter (m)' },
-  { value: 'cm', label: 'Centimeter (cm)' },
-  { value: 'dozen', label: 'Dozen' },
-  { value: 'pack', label: 'Pack' },
-  { value: 'carton', label: 'Carton' },
-  { value: 'unit', label: 'Unit' },
-];
-
 interface AddInventoryItemModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -62,13 +46,21 @@ interface ProductCategory {
   description?: string;
 }
 
+interface UnitOfMeasure {
+  id: string;
+  name: string;
+  code?: string;
+  company_id?: string;
+  is_active?: boolean;
+}
+
 export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInventoryItemModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
     description: '',
     category_id: '__none__', // Always use string, never null
-    unit_of_measure: 'pieces',
+    unit_of_measure: '',
     cost_price: 0,
     unit_price: 0,
     stock_quantity: 0,
@@ -76,9 +68,18 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [showCreateUnit, setShowCreateUnit] = useState(false);
+  const [newUnitName, setNewUnitName] = useState('');
+  const [newUnitDescription, setNewUnitDescription] = useState('');
+  const [isCreatingUnit, setIsCreatingUnit] = useState(false);
+
   const createProduct = useCreateProduct();
+  const createUnitMutation = useCreateUnitOfMeasure();
   const { currentCompany } = useCurrentCompany();
   const { provider } = useDatabase();
+
+  // Load units of measure from database
+  const { data: units, isLoading: unitsLoading, retry: retryUnits } = useUnitsOfMeasure(currentCompany?.id);
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['product_categories'],
@@ -101,6 +102,49 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
     }));
   };
 
+  const handleCreateUnit = async () => {
+    if (!newUnitName.trim()) {
+      toast.error('Unit name is required');
+      return;
+    }
+
+    if (!currentCompany?.id) {
+      toast.error('Company not found. Please refresh and try again.');
+      return;
+    }
+
+    setIsCreatingUnit(true);
+    try {
+      const unitData = {
+        company_id: currentCompany.id,
+        name: newUnitName.trim(),
+        code: newUnitName.trim().toUpperCase().slice(0, 10),
+        is_active: true
+      };
+
+      await createUnitMutation.mutateAsync(unitData);
+
+      // Reset form and close dialog
+      setNewUnitName('');
+      setNewUnitDescription('');
+      setShowCreateUnit(false);
+
+      // Refresh units list and select the newly created unit
+      retryUnits();
+      // The newly created unit should be selected automatically when data updates
+      handleInputChange('unit_of_measure', newUnitName.trim());
+    } catch (error) {
+      console.error('Error creating unit of measure:', error);
+      let errorMessage = 'Failed to create unit of measure. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setIsCreatingUnit(false);
+    }
+  };
+
   const generateProductCode = () => {
     const timestamp = Date.now().toString().slice(-6);
     const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase();
@@ -120,6 +164,11 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
 
     if (!formData.sku.trim()) {
       handleInputChange('sku', generateProductCode());
+    }
+
+    if (!formData.unit_of_measure) {
+      toast.error('Unit of measure is required');
+      return;
     }
 
     if (formData.unit_price <= 0) {
@@ -186,7 +235,7 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
       sku: '',
       description: '',
       category_id: '__none__', // Always use string, never null
-      unit_of_measure: 'pieces',
+      unit_of_measure: '',
       cost_price: 0,
       unit_price: 0,
       stock_quantity: 0,
@@ -297,17 +346,35 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="unit_of_measure">Unit of Measure</Label>
-                <Select value={formData.unit_of_measure || 'pieces'} onValueChange={(value) => handleInputChange('unit_of_measure', value)}>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="unit_of_measure">Unit of Measure</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCreateUnit(true)}
+                    className="h-auto p-1 text-xs text-primary hover:text-primary/80"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Create New
+                  </Button>
+                </div>
+                <Select value={formData.unit_of_measure || ''} onValueChange={(value) => handleInputChange('unit_of_measure', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select unit of measure" />
                   </SelectTrigger>
                   <SelectContent>
-                    {STANDARD_UNITS.map((unit) => (
-                      <SelectItem key={unit.value} value={unit.value}>
-                        {unit.label}
-                      </SelectItem>
-                    ))}
+                    {unitsLoading ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading units...</div>
+                    ) : units && units.length > 0 ? (
+                      (units as UnitOfMeasure[]).map((unit) => (
+                        <SelectItem key={unit.id} value={unit.name}>
+                          {unit.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No units available. Create one first.</div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -409,7 +476,7 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !formData.name.trim() || formData.unit_price <= 0}
+            disabled={isSubmitting || !formData.name.trim() || formData.unit_price <= 0 || !formData.unit_of_measure}
           >
             <Package className="h-4 w-4 mr-2" />
             {isSubmitting ? 'Adding...' : 'Add Product'}
@@ -421,6 +488,55 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
           onOpenChange={setShowCreateCategory}
           onSuccess={handleCategoryCreated}
         />
+
+        <Dialog open={showCreateUnit} onOpenChange={setShowCreateUnit}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create New Unit of Measure</DialogTitle>
+              <DialogDescription>
+                Add a new unit of measure that you can use for your products
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="unitName">Unit Name *</Label>
+                <Input
+                  id="unitName"
+                  value={newUnitName}
+                  onChange={(e) => setNewUnitName(e.target.value)}
+                  placeholder="e.g., Pieces, Box, Kilogram"
+                  disabled={isCreatingUnit}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unitDescription">Description (Optional)</Label>
+                <Textarea
+                  id="unitDescription"
+                  value={newUnitDescription}
+                  onChange={(e) => setNewUnitDescription(e.target.value)}
+                  placeholder="e.g., Used for packing items"
+                  rows={3}
+                  disabled={isCreatingUnit}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateUnit(false)}
+                disabled={isCreatingUnit}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateUnit}
+                disabled={isCreatingUnit || !newUnitName.trim()}
+              >
+                {isCreatingUnit ? 'Creating...' : 'Create Unit'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );

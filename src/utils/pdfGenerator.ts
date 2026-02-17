@@ -1318,6 +1318,32 @@ export const downloadDeliveryNotePDF = async (deliveryNote: any, company?: Compa
                        deliveryNote.invoices?.invoice_number ||
                        (deliveryNote.invoice_id ? `INV-${deliveryNote.invoice_id.slice(-8)}` : 'N/A');
 
+  // Fetch delivery note items if not already included
+  let deliveryItems = deliveryNote.delivery_note_items || deliveryNote.delivery_items || [];
+
+  if (!deliveryItems || deliveryItems.length === 0) {
+    try {
+      console.log('[PDF Generation] Fetching delivery items for delivery note:', deliveryNote.id);
+      const response = await fetch(`/api.php?action=read&table=delivery_note_items&where={"delivery_note_id":"${deliveryNote.id}"}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('med_api_token') || ''}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          deliveryItems = result.data;
+          console.log('[PDF Generation] Loaded delivery items:', deliveryItems);
+        }
+      }
+    } catch (error) {
+      console.warn('[PDF Generation] Failed to fetch delivery items:', error);
+      // Continue without items if fetch fails
+    }
+  }
+
   const documentData: DocumentData = {
     type: 'delivery',
     number: deliveryNote.delivery_note_number || deliveryNote.delivery_number,
@@ -1340,7 +1366,7 @@ export const downloadDeliveryNotePDF = async (deliveryNote: any, company?: Compa
       city: deliveryNote.customers?.city,
       country: deliveryNote.customers?.country,
     },
-    items: (deliveryNote.delivery_note_items || deliveryNote.delivery_items)?.map((item: any, index: number) => ({
+    items: deliveryItems?.map((item: any, index: number) => ({
       description: `${item.products?.name || item.product_name || item.description || 'Unknown Item'}${invoiceNumber !== 'N/A' ? ` (From Invoice: ${invoiceNumber})` : ''}`,
       quantity: item.quantity_delivered || item.quantity || 0,
       unit_price: 0, // Not relevant for delivery notes
