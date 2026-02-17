@@ -100,7 +100,6 @@ export function EditInventoryItemModal({ open, onOpenChange, onSuccess, item }: 
       const { data, error } = await supabase
         .from('product_categories')
         .select('id, name, description')
-        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
