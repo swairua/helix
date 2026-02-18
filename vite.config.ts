@@ -126,21 +126,20 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiUrl || 'http://localhost', // Use external API if configured, else local
           changeOrigin: true,
-          rewrite: (path, req) => {
-            // Get the full URL including query string from the request object
-            const fullUrl = req.url || path;
-
+          rewrite: (path) => {
             // Skip file uploads - keep as /api/uploads
-            if (fullUrl.startsWith('/api/uploads')) {
-              return fullUrl;
+            if (path.startsWith('/api/uploads')) {
+              return path;
             }
             // For query string requests: /api?action=X → /api.php?action=X
-            if (fullUrl.includes('?')) {
-              return fullUrl.replace('/api?', '/api.php?');
+            if (path.includes('?')) {
+              const rewritten = path.replace('/api?', '/api.php?');
+              console.log(`🔄 Rewrite: ${path} → ${rewritten}`);
+              return rewritten;
             }
             // For path-based requests: /api/upload_file → /api.php/upload_file
-            if (fullUrl.startsWith('/api/')) {
-              return '/api.php' + fullUrl.substring(4);
+            if (path.startsWith('/api/')) {
+              return '/api.php' + path.substring(4);
             }
             // Just /api → /api.php
             return '/api.php';
