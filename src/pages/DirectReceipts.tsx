@@ -384,6 +384,19 @@ export default function DirectReceipts() {
   };
 
   const handleDeleteReceipt = (receipt: Receipt) => {
+    console.log('🗑️ [DELETE_TRIGGER] Delete receipt button clicked');
+    console.log('🗑️ [DELETE_TRIGGER] Receipt selected for deletion:', {
+      id: receipt.id,
+      receiptNumber: receipt.receipt_number,
+      invoiceId: receipt.invoice_id,
+      invoiceNumber: receipt.invoice_number,
+      paymentId: receipt.payment_id,
+      totalAmount: receipt.total_amount,
+      paymentMethod: receipt.payment_method,
+      receiptDate: receipt.receipt_date,
+      status: receipt.status
+    });
+    console.log('🗑️ [DELETE_TRIGGER] Opening delete confirmation dialog');
     setReceiptToDelete(receipt);
     setShowDeleteConfirm(true);
   };
@@ -828,7 +841,28 @@ export default function DirectReceipts() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          if (open) {
+            console.log('🗑️ [DELETE_MODAL] Delete confirmation dialog opened');
+            console.log('🗑️ [DELETE_MODAL] Receipt details:', {
+              id: receiptToDelete?.id,
+              receiptNumber: receiptToDelete?.receipt_number,
+              invoiceId: receiptToDelete?.invoice_id,
+              invoiceNumber: receiptToDelete?.invoice_number,
+              paymentId: receiptToDelete?.payment_id,
+              totalAmount: receiptToDelete?.total_amount,
+              paymentMethod: receiptToDelete?.payment_method,
+              receiptDate: receiptToDelete?.receipt_date,
+              notes: receiptToDelete?.notes
+            });
+          } else {
+            console.log('🗑️ [DELETE_MODAL] Delete confirmation dialog closed');
+          }
+          setShowDeleteConfirm(open);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className="flex items-center space-x-2">
@@ -836,31 +870,79 @@ export default function DirectReceipts() {
               <AlertDialogTitle>Delete Receipt</AlertDialogTitle>
             </div>
           </AlertDialogHeader>
-          <div className="space-y-2">
+          <div className="space-y-4">
             <AlertDialogDescription>
-              Are you sure you want to delete receipt <strong>{receiptToDelete?.receipt_number}</strong>?
+              Are you sure you want to delete receipt <strong className="text-foreground">{receiptToDelete?.receipt_number}</strong>?
             </AlertDialogDescription>
-            <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-              <strong>This will also delete:</strong>
-              <ul className="list-disc list-inside mt-1 space-y-1">
+
+            {/* Receipt Details Preview */}
+            <div className="text-sm bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 rounded space-y-2">
+              <div className="font-semibold text-blue-900 dark:text-blue-100">📋 Receipt Information:</div>
+              <div className="space-y-1 text-xs text-blue-800 dark:text-blue-200">
+                {receiptToDelete?.receipt_number && (
+                  <div><span className="font-semibold">Receipt #:</span> {receiptToDelete.receipt_number}</div>
+                )}
+                {receiptToDelete?.invoice_number && (
+                  <div><span className="font-semibold">Invoice #:</span> {receiptToDelete.invoice_number}</div>
+                )}
+                {receiptToDelete?.total_amount && (
+                  <div><span className="font-semibold">Amount:</span> ${parseFloat(receiptToDelete.total_amount).toFixed(2)}</div>
+                )}
+                {receiptToDelete?.payment_method && (
+                  <div><span className="font-semibold">Method:</span> {receiptToDelete.payment_method}</div>
+                )}
+                {receiptToDelete?.receipt_date && (
+                  <div><span className="font-semibold">Date:</span> {new Date(receiptToDelete.receipt_date).toLocaleDateString()}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Cascade Delete Warning */}
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded space-y-2">
+              <div className="font-semibold text-destructive">⚠️ This will also delete:</div>
+              <ul className="list-disc list-inside space-y-1 text-xs">
                 <li>Receipt line items snapshot</li>
                 <li>Payment allocation</li>
-                <li>Payment record</li>
-                <li>Invoice status will revert to draft</li>
+                <li>Payment record (ID: {receiptToDelete?.payment_id || 'N/A'})</li>
+                <li>Invoice status will revert to draft (Invoice ID: {receiptToDelete?.invoice_id || 'N/A'})</li>
               </ul>
             </div>
-            <div className="text-sm font-medium text-destructive">
-              This action cannot be undone.
+
+            {/* Critical Warning */}
+            <div className="text-sm font-semibold text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
+              🔴 This action cannot be undone. All related financial records will be permanently deleted.
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              onClick={() => {
+                console.log('🗑️ [DELETE_MODAL] Delete cancelled by user');
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={() => {
+                console.log('🗑️ [DELETE_MODAL] Delete button clicked, starting deletion process');
+                console.log('🗑️ [DELETE_MODAL] Receipt to delete:', {
+                  id: receiptToDelete?.id,
+                  number: receiptToDelete?.receipt_number,
+                  amount: receiptToDelete?.total_amount
+                });
+                confirmDelete();
+              }}
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="inline-block animate-spin">⏳</span>
+                  Deleting...
+                </span>
+              ) : (
+                'Delete Receipt'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
