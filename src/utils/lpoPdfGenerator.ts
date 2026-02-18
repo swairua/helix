@@ -310,10 +310,9 @@ export const generateLPOPDF = async (lpo: LPOPDFData, company: CompanyData) => {
 
   // Footer
   const pageHeight = doc.internal.pageSize.height;
-  doc.setFontSize(8);
-  doc.setTextColor(128, 128, 128);
-  doc.text(`Generated on ${new Date().toLocaleString()}`, 20, pageHeight - 20);
-  doc.text(`Page 1`, 180, pageHeight - 20);
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Thank you for trading with us', 105, pageHeight - 20, { align: 'center' });
 
   // Save the PDF
   doc.save(`LPO-${lpo.lpo_number}.pdf`);

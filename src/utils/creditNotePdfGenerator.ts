@@ -557,7 +557,7 @@ export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: C
         
         <!-- Footer -->
         <div class="footer">
-          <em>This credit note can be applied against future invoices or refunded as per our terms</em>
+          <em>Thank you for trading with us</em>
         </div>
       </div>
     </body>
