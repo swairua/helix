@@ -659,7 +659,6 @@ try {
 
     // Delete fallback logo endpoint
     if ($action === "delete_fallback_logo") {
-        error_log('🎯 Processing fallback logo deletion...');
 
         // Get public directory path
         $public_dir = dirname(__DIR__) . '/public';
@@ -793,8 +792,6 @@ try {
             // For company and profile updates, allow bypassing token if properly configured
             // This enables updates when token is missing but the user profile is correctly set up
             if ($action === 'update' && ($table === 'companies' || $table === 'profiles')) {
-                error_log("🟡 [AUTH] $action on $table - No token provided, entering bypass mode...");
-                error_log("⚠️ [SECURITY] Allowing $action on $table without token (bypass mode for configured system)");
 
                 // Return a minimal user object with bypass flag
                 return [
@@ -810,7 +807,6 @@ try {
             // For other operations, require a token
             http_response_code(401);
             error_log("🔴 [AUTH] $action on $table - No token provided (DENIED)");
-            error_log("📋 [DEBUG] Authorization header present: " . ($auth_header ? "yes" : "no"));
             throw new Exception("Authentication required. Missing authorization token.");
         }
 
@@ -820,14 +816,12 @@ try {
         // If strict verification failed, try to decode without signature verification
         // This allows users with valid identity but expired/invalid JWT to proceed if they're admin
         if (!$decoded) {
-            error_log("🟡 [AUTH] $action on $table - JWT verification failed, attempting lenient decode...");
             $parts = explode('.', $token);
             if (count($parts) === 3) {
                 try {
                     // Decode payload without verifying signature
                     $decoded = json_decode(base64_decode($parts[1]), true);
                     if ($decoded) {
-                        error_log("🟡 [AUTH] Successfully extracted identity from invalid JWT (lenient mode)");
                     }
                 } catch (Exception $e) {
                     $decoded = null;
@@ -839,8 +833,6 @@ try {
         // This handles cases where token is invalid but system setup is correct
         if (!$decoded) {
             if ($action === 'update' && ($table === 'companies' || $table === 'profiles')) {
-                error_log("🟡 [AUTH] $action on $table - Token validation failed, but entering bypass mode...");
-                error_log("⚠️ [SECURITY] Allowing $action on $table with invalid token (bypass mode for configured system)");
 
                 return [
                     'id' => null,
@@ -900,7 +892,6 @@ try {
             throw new Exception("Insufficient permissions. User role must be admin to perform $action.");
         }
 
-        error_log("✅ [AUTH] $action on $table - Authorization passed for user {$user['email']} (role: {$user['role']}, status: {$user['status']})");
         return $user;
     }
 
@@ -913,13 +904,11 @@ try {
 
         // If in bypass mode (token was missing but company update is allowed), allow the operation
         if (isset($user['bypass_mode']) && $user['bypass_mode']) {
-            error_log("✅ [AUTH] Bypass mode enabled - allowing company {$company_id} update");
             return true;
         }
 
         // Super admins can manage any company
         if ($user['role'] === 'super_admin') {
-            error_log("✅ [AUTH] Super admin {$user['email']} can manage any company");
             return true;
         }
 
@@ -928,14 +917,11 @@ try {
         $user_company_id = (string)$user['company_id'];
         $target_company_id = (string)$company_id;
 
-        error_log("🔍 [AUTH] Checking company access: user_company={$user_company_id}, target_company={$target_company_id}, user_role={$user['role']}");
 
         if ($user_company_id === $target_company_id) {
-            error_log("✅ [AUTH] User {$user['email']} can manage company {$company_id} (match)");
             return true;
         }
 
-        error_log("🔴 [AUTH] User {$user['email']} cannot manage company $company_id (user's company: {$user['company_id']}, role: {$user['role']})");
         return false;
     }
 
@@ -1024,14 +1010,12 @@ try {
 
         // If strict verification fails, try lenient decode to get user info from an expired token
         if (!$decoded) {
-            error_log("🟡 [TOKEN_REFRESH] JWT verification failed, attempting lenient decode...");
             $parts = explode('.', $token);
             if (count($parts) === 3) {
                 try {
                     // Decode payload without verifying signature (allows expired tokens to be refreshed)
                     $decoded = json_decode(base64_decode($parts[1]), true);
                     if ($decoded) {
-                        error_log("🟡 [TOKEN_REFRESH] Successfully extracted identity from token (expired or invalid signature)");
                     }
                 } catch (Exception $e) {
                     $decoded = null;
@@ -1061,7 +1045,6 @@ try {
         // Create a new JWT token with the same user info
         $new_token = createJWT($user_id, $user_email, $user_role, $company_id, $status);
 
-        error_log("✅ [TOKEN_REFRESH] Token refreshed successfully for user: $user_email");
 
         echo json_encode([
             'status' => 'success',
@@ -1539,12 +1522,10 @@ try {
 
         // Log skipped columns for debugging
         if (!empty($skipped_columns)) {
-            error_log("Skipped columns not in table schema: " . implode(", ", $skipped_columns));
         }
 
         $sql = "INSERT INTO `$table` (" . implode(", ", $columns) . ") VALUES (" . implode(", ", $values) . ")";
 
-        error_log("SQL INSERT: " . $sql);
 
         if (!$conn->query($sql)) {
             error_log("MySQL Error: " . $conn->error . " | SQL: " . $sql);
@@ -1634,7 +1615,7 @@ try {
                     $company_id = $matches[1];
                 }
 
-                error_log("🔍 [AUTH] Parsed string where clause: '{$where}' -> company_id={$company_id}");
+
             }
 
             if (!$company_id) {
@@ -1661,7 +1642,6 @@ try {
                 throw new Exception($detailedMessage);
             }
 
-            error_log("✅ [AUTH] Company update authorized for {$auth['email']} on company {$company_id}");
         }
 
         $sets = [];
@@ -1681,7 +1661,6 @@ try {
             $sql .= " WHERE " . $where;
         }
 
-        error_log("🟦 SQL UPDATE: " . $sql);
 
         if (!$conn->query($sql)) {
             error_log("🔴 MySQL Error: " . $conn->error . " | SQL: " . $sql);
@@ -1689,14 +1668,12 @@ try {
         }
 
         $affectedRows = $conn->affected_rows;
-        error_log("✅ Update completed - Affected rows: " . $affectedRows . " | Table: " . $table);
 
         $response = [
             'status' => 'success',
             'message' => 'Record updated',
             'affected_rows' => $affectedRows
         ];
-        error_log("✅ Sending JSON response: " . json_encode($response));
         echo json_encode($response);
         exit();
     }
@@ -1718,7 +1695,6 @@ try {
             throw new Exception("Missing invoice_id parameter");
         }
 
-        error_log("🗑️ [DELETE_CASCADE] Starting invoice deletion cascade for invoice_id: $invoice_id");
 
         // Escape the invoice ID for safe use in SQL
         $invoice_id_e = escape($conn, $invoice_id);
@@ -1737,7 +1713,6 @@ try {
             }
             $invoice = $invoice_result->fetch_assoc();
             $invoice_number = $invoice['invoice_number'];
-            error_log("🗑️ [DELETE_CASCADE] Found invoice: $invoice_number");
 
             // Step 2: Find all payments related to this invoice (directly or through allocations)
             // Get payment IDs that are directly linked to invoice or allocated to it
@@ -1831,7 +1806,6 @@ try {
                 throw new Exception("Failed to commit transaction: " . $conn->error);
             }
 
-            error_log("✅ [DELETE_CASCADE] Successfully deleted invoice $invoice_number with " . count($payment_ids) . " related payments");
 
             // Return success response
             echo json_encode([
@@ -1861,7 +1835,6 @@ try {
         }
 
         // Log delete request
-        error_log("🗑️ [DELETE] Deleting from table: $table, where: " . json_encode($where));
 
         // Check authorization for modifications to protected tables
         $protected_tables = ['companies', 'users', 'profiles', 'user_permissions', 'roles'];
@@ -1887,7 +1860,7 @@ try {
                     $company_id = $matches[1];
                 }
 
-                error_log("🔍 [AUTH] Parsed string where clause: '{$where}' -> company_id={$company_id}");
+
             }
 
             if (!$company_id) {
@@ -1903,7 +1876,6 @@ try {
                 throw new Exception("You do not have permission to delete this company.");
             }
 
-            error_log("✅ [AUTH] Company delete authorized for {$auth['email']} on company {$company_id}");
         }
 
         $sql = "DELETE FROM `$table`";
@@ -1918,7 +1890,6 @@ try {
             $sql .= " WHERE " . $where;
         }
 
-        error_log("🗑️ [DELETE] Executing SQL: $sql");
 
         if (!$conn->query($sql)) {
             error_log("🔴 [DELETE] Error deleting from $table: " . $conn->error);
@@ -1926,7 +1897,6 @@ try {
         }
 
         $affected_rows = $conn->affected_rows;
-        error_log("✅ [DELETE] Successfully deleted $affected_rows row(s) from $table");
 
         echo json_encode([
             'status' => 'success',
@@ -2002,7 +1972,6 @@ try {
 
         $sql = "INSERT INTO `$table` (" . implode(", ", $columns) . ") VALUES (" . implode(", ", $values) . ")";
 
-        error_log("SQL COPY: " . $sql);
 
         if (!$conn->query($sql)) {
             error_log("MySQL Error: " . $conn->error . " | SQL: " . $sql);
@@ -2076,7 +2045,6 @@ try {
             throw new Exception("Destination file already exists");
         }
 
-        error_log("📋 Copying file: $full_source_path -> $destination_path");
 
         // Copy the file
         if (!copy($real_source_path, $destination_path)) {
@@ -2094,7 +2062,6 @@ try {
         $host = $_SERVER['HTTP_HOST'];
         $file_url = "$protocol://$host/uploads/$destination_name";
 
-        error_log('✅ File copied successfully: ' . $file_url);
 
         echo json_encode([
             'status' => 'success',
@@ -2486,8 +2453,6 @@ try {
     elseif ($action === "delete_receipt_with_cascade") {
         // Transaction-safe receipt deletion that cascades to all related records
         // Requires authorization for modifications
-        error_log("🗑️ [DELETE_RECEIPT_CASCADE] ===== START DELETE RECEIPT CASCADE =====");
-        error_log("🗑️ [DELETE_RECEIPT_CASCADE] Received action: delete_receipt_with_cascade");
 
         // Debug: Log the request data safely
         try {
@@ -2497,10 +2462,8 @@ try {
                     error_log("🗑️ [DELETE_RECEIPT_CASCADE] Receipt ID in body: " . $json_body['receipt_id']);
                 }
             } else {
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] JSON body is not an array or is null");
             }
         } catch (Exception $logErr) {
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Error logging request data: " . $logErr->getMessage());
         }
 
         try {
@@ -2514,33 +2477,27 @@ try {
                 throw new Exception("Database connection lost");
             }
 
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Database connection verified");
 
             $auth = requireAuthForModification($action, 'receipts');
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Authorization passed for user");
 
             // Extract receipt ID from request
             $receiptId = $json_body['receipt_id'] ?? $_POST['receipt_id'] ?? null;
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Extracted receipt_id: " . var_export($receiptId, true));
 
             if (!$receiptId) {
                 throw new Exception("Missing receipt_id parameter");
             }
 
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Starting receipt deletion cascade for receipt_id: $receiptId");
 
             // Cast receipt ID to integer (since receipts.id is now INT AUTO_INCREMENT)
             $receiptId = (int)$receiptId;
             if ($receiptId <= 0) {
                 throw new Exception("Invalid receipt_id: must be a positive integer");
             }
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Receipt ID validated and cast to int: $receiptId");
 
             // Start transaction for atomicity
             if (!$conn->begin_transaction()) {
                 throw new Exception("Failed to start transaction: " . $conn->error);
             }
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Database transaction started successfully");
 
             // Initialize variables to avoid undefined variable errors later
             $receiptNumber = 'Unknown';
@@ -2550,7 +2507,6 @@ try {
 
             // Step 1: Fetch receipt details before deletion (for audit/response)
             $receipt_sql = "SELECT * FROM receipts WHERE id = $receiptId LIMIT 1";
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 1 - Fetching receipt with SQL: $receipt_sql");
             $receipt_result = $conn->query($receipt_sql);
             if (!$receipt_result) {
                 throw new Exception("Database query error: " . $conn->error);
@@ -2563,30 +2519,24 @@ try {
             $invoiceId = $receipt['invoice_id'] ?? null;
             $paymentId = $receipt['payment_id'] ?? null;
             $receiptAmount = (float)($receipt['total_amount'] ?? 0);
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 1 SUCCESS - Found receipt: $receiptNumber (amount: $receiptAmount, invoiceId: $invoiceId, paymentId: $paymentId)");
 
             // Step 2: Delete receipt items (snapshot)
             // These have CASCADE delete on receipt_id, but we delete explicitly for clarity
             $delete_items_sql = "DELETE FROM receipt_items WHERE receipt_id = $receiptId";
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 2 - Deleting receipt items with SQL: $delete_items_sql");
             if (!$conn->query($delete_items_sql)) {
                 throw new Exception("Failed to delete receipt items: " . $conn->error);
             }
             $items_affected = $conn->affected_rows;
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 2 SUCCESS - Deleted $items_affected receipt items");
 
             // Step 3: Delete payment_audit_log entries before deleting the payment
             if ($paymentId) {
                 $paymentId = (int)$paymentId;
                 $delete_audit_sql = "DELETE FROM payment_audit_log WHERE payment_id = $paymentId";
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 3 - Deleting payment audit logs with SQL: $delete_audit_sql");
                 if (!$conn->query($delete_audit_sql)) {
                     throw new Exception("Failed to delete payment audit log: " . $conn->error);
                 }
                 $audit_affected = $conn->affected_rows;
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 3 SUCCESS - Deleted $audit_affected audit log entries");
             } else {
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 3 SKIPPED - No payment ID");
             }
 
             // Step 4: Delete payment allocations
@@ -2595,37 +2545,29 @@ try {
                 // With CASCADE constraint on payment_allocations, this will auto-delete related records
                 // But we delete explicitly for clarity and control
                 $delete_allocations_sql = "DELETE FROM payment_allocations WHERE payment_id = $paymentId";
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 4 - Deleting payment allocations with SQL: $delete_allocations_sql");
                 if (!$conn->query($delete_allocations_sql)) {
                     throw new Exception("Failed to delete payment allocations: " . $conn->error);
                 }
                 $allocations_affected = $conn->affected_rows;
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 4 SUCCESS - Deleted $allocations_affected payment allocations");
             } else {
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 4 SKIPPED - No payment ID");
             }
 
             // Step 5: Delete the payment record
             if ($paymentId) {
                 $paymentId = (int)$paymentId;
                 $delete_payment_sql = "DELETE FROM payments WHERE id = $paymentId";
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 5 - Deleting payment with SQL: $delete_payment_sql");
                 if (!$conn->query($delete_payment_sql)) {
                     throw new Exception("Failed to delete payment: " . $conn->error);
                 }
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 5 SUCCESS - Payment deleted");
             } else {
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 5 SKIPPED - No payment ID");
             }
 
             // Step 6: Recalculate invoice balance and status if this receipt was linked to an invoice
             if ($invoiceId) {
                 $invoiceId = (int)$invoiceId;
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6 - Recalculating invoice status for invoice_id: $invoiceId");
 
                 // Fetch current invoice state
                 $invoice_check_sql = "SELECT id, total_amount, status FROM invoices WHERE id = $invoiceId LIMIT 1";
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6a - Fetching invoice with SQL: $invoice_check_sql");
                 $invoice_check_result = $conn->query($invoice_check_sql);
 
                 if (!$invoice_check_result) {
@@ -2635,7 +2577,6 @@ try {
                 if ($invoice_check_result->num_rows > 0) {
                     $invoice = $invoice_check_result->fetch_assoc();
                     $total_amount = $invoice['total_amount'] ?? 0;
-                    error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6b - Invoice found, total_amount: $total_amount");
 
                     // Calculate paid amount from remaining payment allocations
                     $paid_sum_sql = "
@@ -2643,7 +2584,6 @@ try {
                         FROM payment_allocations pa
                         WHERE pa.invoice_id = $invoiceId
                     ";
-                    error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6c - Calculating paid amount with SQL: $paid_sum_sql");
                     $paid_sum_result = $conn->query($paid_sum_sql);
                     $paid_amount = 0;
                     if ($paid_sum_result) {
@@ -2652,7 +2592,6 @@ try {
                     } else {
                         throw new Exception("Failed to calculate paid amount: " . $conn->error);
                     }
-                    error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6c - Paid amount calculated: $paid_amount");
 
                     $balance_due = max(0, floatval($total_amount) - $paid_amount);
 
@@ -2663,7 +2602,6 @@ try {
                     } elseif ($paid_amount > 0) {
                         $new_status = 'partial';
                     }
-                    error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6d - New invoice status: $new_status (paid: $paid_amount, balance_due: $balance_due)");
 
                     // Update invoice with recalculated values
                     $update_invoice_sql = "UPDATE invoices SET
@@ -2673,35 +2611,27 @@ try {
                         updated_at = NOW()
                         WHERE id = $invoiceId";
 
-                    error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6e - Updating invoice with SQL: $update_invoice_sql");
                     if (!$conn->query($update_invoice_sql)) {
                         throw new Exception("Failed to update invoice status: " . $conn->error);
                     }
-                    error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6 SUCCESS - Invoice updated");
                 } else {
-                    error_log("⚠️ [DELETE_RECEIPT_CASCADE] Step 6 WARNING - Invoice not found with id: $invoiceId");
                 }
             } else {
-                error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 6 SKIPPED - No invoice ID");
             }
 
             // Step 7: Delete the receipt record itself
             // This will cascade to receipt_items (though we already deleted them)
             $delete_receipt_sql = "DELETE FROM receipts WHERE id = $receiptId";
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 7 - Deleting receipt with SQL: $delete_receipt_sql");
             if (!$conn->query($delete_receipt_sql)) {
                 throw new Exception("Failed to delete receipt: " . $conn->error);
             }
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 7 SUCCESS - Receipt record deleted");
 
             // Commit transaction
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Committing database transaction");
             if (!$conn->commit()) {
                 throw new Exception("Failed to commit transaction: " . $conn->error);
             }
 
-            error_log("✅ [DELETE_RECEIPT_CASCADE] ===== COMPLETE - Successfully deleted receipt $receiptNumber (amount: $receiptAmount, linked to invoice: $invoiceId) =====");
-
+    
             // Return success response
             @ob_clean(); // Clear any accidental output (suppress any warnings)
             http_response_code(200);
@@ -2776,8 +2706,11 @@ try {
         http_response_code(400);
     }
 
-    error_log("🔴 API Error [" . http_response_code() . "]: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-    error_log("🔴 Stack trace: " . $e->getTraceAsString());
+    // Suppress common authentication errors to keep logs clean
+    if (http_response_code() !== 401) {
+        error_log("🔴 API Error [" . http_response_code() . "]: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+        error_log("🔴 Stack trace: " . $e->getTraceAsString());
+    }
 
     try {
         @ob_clean(); // Clear any accidental output (suppress warnings)
