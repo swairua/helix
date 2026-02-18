@@ -28,7 +28,7 @@ header("Access-Control-Max-Age: 86400");
 header("Access-Control-Expose-Headers: Content-Type, X-Total-Count, X-Page, X-Page-Size");
 
 // ENDPOINT IDENTIFIER - Log which API file is executing (after headers are set)
-error_log("🟢 [ENDPOINT] Using public/api.php (main API)");
+// Removed verbose logging - only SQL errors are logged now
 
 // Set error handler to catch any errors and ensure CORS headers are sent
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
@@ -41,7 +41,9 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 set_exception_handler(function($exception) {
     error_log("🔴 [EXCEPTION_HANDLER] Uncaught Exception: " . $exception->getMessage() . " in " . $exception->getFile() . ":" . $exception->getLine());
     error_log("🔴 [EXCEPTION_HANDLER] Stack trace: " . $exception->getTraceAsString());
+    ob_clean(); // Clear any accidental output
     http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'status' => 'error',
         'message' => 'An unexpected error occurred: ' . $exception->getMessage(),
@@ -59,7 +61,10 @@ register_shutdown_function(function() {
     $error = error_get_last();
     if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_CORE_ERROR || $error['type'] === E_COMPILE_ERROR)) {
         error_log("🔴 [SHUTDOWN_HANDLER] Fatal error caught: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+        // Clear any buffered output to ensure clean JSON response
+        ob_clean();
         http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'status' => 'error',
             'message' => 'A fatal error occurred: ' . $error['message'],
@@ -177,13 +182,11 @@ $schema = $_POST['schema'] ?? ($_GET['schema'] ?? ($json_body['schema'] ?? null)
 if (is_array($action)) {
     // If it's an array, take the first element
     $action = $action[0] ?? null;
-    error_log("🟡 [ACTION] Received action as array, extracted first element: " . (is_string($action) ? $action : json_encode($action)));
 }
 
 // Convert to string and trim
 if ($action !== null) {
     $action = trim((string)$action);
-    error_log("🟢 [ACTION] Normalized action parameter to: '$action' (type: " . gettype($action) . ", length: " . strlen($action) . ")");
 }
 
 // Handle file uploads endpoint
@@ -2673,7 +2676,9 @@ try {
             error_log("✅ [DELETE_RECEIPT_CASCADE] ===== COMPLETE - Successfully deleted receipt $receiptNumber (amount: $receiptAmount, linked to invoice: $invoiceId) =====");
 
             // Return success response
+            ob_clean(); // Clear any accidental output
             http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'status' => 'success',
                 'message' => "Receipt $receiptNumber and all related records deleted successfully",
@@ -2699,7 +2704,9 @@ try {
             }
 
             error_log("🔴 [DELETE_RECEIPT_CASCADE] ===== FAILED - Receipt deletion transaction failed: " . $e->getMessage() . " =====");
+            ob_clean(); // Clear any accidental output
             http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'status' => 'error',
                 'message' => 'Receipt deletion failed: ' . $e->getMessage(),
@@ -2730,6 +2737,8 @@ try {
 
     error_log("API Error [" . http_response_code() . "]: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
 
+    ob_clean(); // Clear any accidental output
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'status' => 'error',
         'message' => $e->getMessage()
