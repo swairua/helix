@@ -361,7 +361,6 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         total_amount: totalAmount,
         paid_amount: 0,
         balance_due: balanceDue,
-        terms_and_conditions: null,
         notes: notes,
         created_by: profile?.id
       };

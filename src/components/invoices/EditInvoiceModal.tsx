@@ -63,7 +63,6 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const [dueDate, setDueDate] = useState('');
   const [lpoNumber, setLpoNumber] = useState('');
   const [notes, setNotes] = useState('');
-  const [termsAndConditions, setTermsAndConditions] = useState('');
   
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
@@ -103,7 +102,6 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
       setDueDate(invoice.due_date || '');
       setLpoNumber(invoice.lpo_number || '');
       setNotes(invoice.notes || '');
-      setTermsAndConditions(invoice.terms_and_conditions || '');
 
       // Convert invoice items to local format
       const invoiceItems = (invoice.invoice_items || []).map((item: any, index: number) => ({
@@ -399,7 +397,6 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
         tax_amount: taxAmount,
         total_amount: totalAmount,
         balance_due: balanceDue,
-        terms_and_conditions: termsAndConditions,
         notes: notes,
       };
 
@@ -539,16 +536,6 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                   />
                 </div>
 
-                {/* Terms and Conditions */}
-                <div className="space-y-2">
-                  <Label htmlFor="terms">Terms and Conditions</Label>
-                  <Textarea
-                    id="terms"
-                    value={termsAndConditions}
-                    onChange={(e) => setTermsAndConditions(e.target.value)}
-                    rows={3}
-                  />
-                </div>
               </CardContent>
             </Card>
           </div>

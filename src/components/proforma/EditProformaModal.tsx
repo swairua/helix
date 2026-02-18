@@ -58,7 +58,6 @@ interface Proforma {
   tax_amount: number;
   total_amount: number;
   notes?: string;
-  terms_and_conditions?: string;
   customers?: {
     name: string;
     email?: string;
@@ -86,7 +85,6 @@ export const EditProformaModal = ({
     proforma_date: '',
     valid_until: '',
     notes: '',
-    terms_and_conditions: '',
     status: 'draft',
   });
 
@@ -109,7 +107,6 @@ export const EditProformaModal = ({
         proforma_date: proforma.proforma_date,
         valid_until: proforma.valid_until,
         notes: proforma.notes || '',
-        terms_and_conditions: proforma.terms_and_conditions || '',
         status: proforma.status,
       });
       
@@ -246,7 +243,6 @@ export const EditProformaModal = ({
           valid_until: formData.valid_until,
           status: formData.status,
           notes: formData.notes,
-          terms_and_conditions: formData.terms_and_conditions,
         },
         items: itemsToUpdate,
       });
@@ -509,16 +505,6 @@ export const EditProformaModal = ({
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Internal notes..."
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="terms_and_conditions">Terms & Conditions</Label>
-              <Textarea
-                id="terms_and_conditions"
-                value={formData.terms_and_conditions}
-                onChange={(e) => setFormData(prev => ({ ...prev, terms_and_conditions: e.target.value }))}
-                placeholder="Terms and conditions..."
                 rows={3}
               />
             </div>

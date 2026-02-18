@@ -279,7 +279,6 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         subtotal: subtotal,
         tax_amount: taxAmount,
         total_amount: totalAmount,
-        terms_and_conditions: null,
         notes: notes,
         created_by: profile.id
       };
