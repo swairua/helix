@@ -59,7 +59,6 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const [quotationDate, setQuotationDate] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [notes, setNotes] = useState('');
-  const [termsAndConditions, setTermsAndConditions] = useState('');
   
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
@@ -83,7 +82,6 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
       setQuotationDate(quotation.quotation_date || '');
       setValidUntil(quotation.valid_until || '');
       setNotes(quotation.notes || '');
-      setTermsAndConditions(quotation.terms_and_conditions || '');
       
       // Convert quotation items to local format
       const quotationItems = (quotation.quotation_items || []).map((item: any, index: number) => ({
@@ -259,7 +257,6 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
         valid_until: validUntil,
         status: quotation.status || 'draft',
         notes: notes,
-        terms_and_conditions: termsAndConditions,
         subtotal: subtotal,
         tax_amount: taxAmount,
         total_amount: totalAmount,
@@ -391,16 +388,6 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
                   />
                 </div>
 
-                {/* Terms and Conditions */}
-                <div className="space-y-2">
-                  <Label htmlFor="terms">Terms and Conditions</Label>
-                  <Textarea
-                    id="terms"
-                    value={termsAndConditions}
-                    onChange={(e) => setTermsAndConditions(e.target.value)}
-                    rows={3}
-                  />
-                </div>
               </CardContent>
             </Card>
           </div>

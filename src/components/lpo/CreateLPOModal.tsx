@@ -319,7 +319,6 @@ export const CreateLPOModal = ({
         contact_person: formData.contact_person,
         contact_phone: formData.contact_phone,
         notes: formData.notes,
-        terms_and_conditions: null,
       };
 
       const lpoItems = items.map(item => ({

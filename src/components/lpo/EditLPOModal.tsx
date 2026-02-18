@@ -67,7 +67,6 @@ export const EditLPOModal = ({
     contact_person: '',
     contact_phone: '',
     notes: '',
-    terms_and_conditions: '',
     status: 'draft',
   });
 
@@ -93,7 +92,6 @@ export const EditLPOModal = ({
         contact_person: lpo.contact_person || '',
         contact_phone: lpo.contact_phone || '',
         notes: lpo.notes || '',
-        terms_and_conditions: lpo.terms_and_conditions || '',
         status: lpo.status || 'draft',
       });
 
@@ -206,7 +204,6 @@ export const EditLPOModal = ({
         contact_person: formData.contact_person,
         contact_phone: formData.contact_phone,
         notes: formData.notes,
-        terms_and_conditions: formData.terms_and_conditions,
       };
 
       // Update LPO with items using the new comprehensive hook
@@ -543,16 +540,6 @@ export const EditLPOModal = ({
                 value={formData.notes}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
                 placeholder="Additional notes..."
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="terms_and_conditions">Terms & Conditions</Label>
-              <Textarea
-                id="terms_and_conditions"
-                value={formData.terms_and_conditions}
-                onChange={(e) => handleInputChange('terms_and_conditions', e.target.value)}
-                placeholder="Terms and conditions..."
                 rows={3}
               />
             </div>

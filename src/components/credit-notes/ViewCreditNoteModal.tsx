@@ -221,28 +221,15 @@ export function ViewCreditNoteModal({ open, onOpenChange, creditNote }: ViewCred
           </Card>
 
           {/* Notes */}
-          {(creditNote.notes || creditNote.terms_and_conditions) && (
+          {creditNote.notes && (
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
+                <CardTitle>Notes</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {creditNote.notes && (
-                  <div>
-                    <h4 className="font-medium mb-2">Notes:</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {creditNote.notes}
-                    </p>
-                  </div>
-                )}
-                {creditNote.terms_and_conditions && (
-                  <div>
-                    <h4 className="font-medium mb-2">Terms and Conditions:</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {creditNote.terms_and_conditions}
-                    </p>
-                  </div>
-                )}
+              <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {creditNote.notes}
+                </p>
               </CardContent>
             </Card>
           )}

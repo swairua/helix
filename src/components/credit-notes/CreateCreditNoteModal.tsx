@@ -89,7 +89,6 @@ export function CreateCreditNoteModal({
   const [creditNoteDate, setCreditNoteDate] = useState(new Date().toISOString().split('T')[0]);
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
-  const [termsAndConditions, setTermsAndConditions] = useState('All credits must be used within 90 days.');
   const [affectsInventory, setAffectsInventory] = useState(false);
   
   const [items, setItems] = useState<CreditNoteItem[]>([]);
@@ -337,7 +336,6 @@ export function CreateCreditNoteModal({
         balance: totalAmount,
         affects_inventory: affectsInventory,
         notes: notes,
-        terms_and_conditions: termsAndConditions,
         created_by: null // TODO: Get from auth context when implemented
       };
 
@@ -377,7 +375,6 @@ export function CreateCreditNoteModal({
     setCreditNoteDate(new Date().toISOString().split('T')[0]);
     setReason('');
     setNotes('');
-    setTermsAndConditions('All credits must be used within 90 days.');
     setAffectsInventory(false);
     setItems([]);
     setSearchProduct('');
@@ -499,16 +496,6 @@ export function CreateCreditNoteModal({
                   />
                 </div>
 
-                {/* Terms and Conditions */}
-                <div className="space-y-2">
-                  <Label htmlFor="terms">Terms and Conditions</Label>
-                  <Textarea
-                    id="terms"
-                    value={termsAndConditions}
-                    onChange={(e) => setTermsAndConditions(e.target.value)}
-                    rows={2}
-                  />
-                </div>
               </CardContent>
             </Card>
           </div>

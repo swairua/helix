@@ -239,7 +239,6 @@ export const CreateProformaModal = ({
         tax_amount: totals.totalTax,
         total_amount: totals.total,
         notes: formData.notes,
-        terms_and_conditions: null,
       };
 
       // Convert items to proforma items format (simplified for current schema)

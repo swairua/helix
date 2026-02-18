@@ -395,31 +395,16 @@ export function ViewQuotationModal({
             </CardContent>
           </Card>
 
-          {/* Notes and Terms */}
-          {(quotation.notes || quotation.terms_and_conditions) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {quotation.notes && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quotation.notes}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {quotation.terms_and_conditions && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Terms and Conditions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quotation.terms_and_conditions}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+          {/* Notes */}
+          {quotation.notes && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quotation.notes}</p>
+              </CardContent>
+            </Card>
           )}
 
           {/* Footer */}

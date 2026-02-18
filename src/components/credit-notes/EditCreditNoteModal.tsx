@@ -44,7 +44,6 @@ export function EditCreditNoteModal({
   const [creditNoteDate, setCreditNoteDate] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
-  const [termsAndConditions, setTermsAndConditions] = useState('');
   const [affectsInventory, setAffectsInventory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,7 +55,6 @@ export function EditCreditNoteModal({
       setCreditNoteDate(creditNote.credit_note_date);
       setReason(creditNote.reason || '');
       setNotes(creditNote.notes || '');
-      setTermsAndConditions(creditNote.terms_and_conditions || '');
       setAffectsInventory(creditNote.affects_inventory);
     }
   }, [creditNote, open]);
@@ -99,7 +97,6 @@ export function EditCreditNoteModal({
         credit_note_date: creditNoteDate,
         reason: reason,
         notes: notes,
-        terms_and_conditions: termsAndConditions,
         affects_inventory: affectsInventory,
       };
 
@@ -124,7 +121,6 @@ export function EditCreditNoteModal({
       setCreditNoteDate(creditNote.credit_note_date);
       setReason(creditNote.reason || '');
       setNotes(creditNote.notes || '');
-      setTermsAndConditions(creditNote.terms_and_conditions || '');
       setAffectsInventory(creditNote.affects_inventory);
     }
   };
@@ -197,17 +193,6 @@ export function EditCreditNoteModal({
             />
           </div>
 
-          {/* Terms and Conditions */}
-          <div className="space-y-2">
-            <Label htmlFor="terms">Terms and Conditions</Label>
-            <Textarea
-              id="terms"
-              value={termsAndConditions}
-              onChange={(e) => setTermsAndConditions(e.target.value)}
-              rows={2}
-              placeholder="Terms and conditions for this credit note..."
-            />
-          </div>
 
           {/* Current Financial Information (Read-only) */}
           <div className="bg-muted/50 p-4 rounded-lg">

@@ -54,7 +54,6 @@ interface Proforma {
   tax_amount: number;
   total_amount: number;
   notes?: string;
-  terms_and_conditions?: string;
   customers?: {
     name: string;
     email?: string;
@@ -265,34 +264,18 @@ export const ViewProformaModal = ({
             </Card>
           )}
 
-          {/* Notes and Terms */}
-          {(proforma.notes || proforma.terms_and_conditions) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {proforma.notes && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {proforma.notes}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-              {proforma.terms_and_conditions && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Terms & Conditions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {proforma.terms_and_conditions}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+          {/* Notes */}
+          {proforma.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {proforma.notes}
+                </p>
+              </CardContent>
+            </Card>
           )}
         </div>
 
