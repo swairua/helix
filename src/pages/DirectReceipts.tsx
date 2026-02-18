@@ -454,12 +454,25 @@ export default function DirectReceipts() {
           bodyLength: responseText.length,
           bodyPreview: responseText.substring(0, 200)
         });
+
+        // Handle empty response
+        if (!responseText || responseText.trim() === '') {
+          console.error('🗑️ [FRONTEND] Empty response body from server');
+          throw new Error(`HTTP ${response.status}: The server returned an empty response. This may indicate a server error.`);
+        }
+
+        // Try to parse JSON error response
         try {
           const errorData = JSON.parse(responseText);
           console.error('🗑️ [FRONTEND] Parsed error data:', errorData);
           throw new Error(errorData.message || 'Failed to delete receipt');
         } catch (parseErr) {
-          console.error('🗑️ [FRONTEND] Failed to parse error response:', parseErr);
+          console.error('🗑️ [FRONTEND] Failed to parse error response as JSON:', parseErr);
+          // If it's not JSON, use the raw text as the error message
+          if (responseText.includes('<') || responseText.includes('<!')) {
+            console.error('🗑️ [FRONTEND] Response appears to be HTML, not JSON');
+            throw new Error(`HTTP ${response.status}: Server returned an HTML error page. Please check server logs.`);
+          }
           throw new Error(`HTTP ${response.status}: ${responseText || 'Empty response'}`);
         }
       }

@@ -41,18 +41,16 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 set_exception_handler(function($exception) {
     error_log("🔴 [EXCEPTION_HANDLER] Uncaught Exception: " . $exception->getMessage() . " in " . $exception->getFile() . ":" . $exception->getLine());
     error_log("🔴 [EXCEPTION_HANDLER] Stack trace: " . $exception->getTraceAsString());
-    ob_clean(); // Clear any accidental output
+    @ob_clean(); // Clear any accidental output (suppress warnings)
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
+
+    $error_response = [
         'status' => 'error',
-        'message' => 'An unexpected error occurred: ' . $exception->getMessage(),
-        'debug' => [
-            'exception_class' => get_class($exception),
-            'file' => $exception->getFile(),
-            'line' => $exception->getLine()
-        ]
-    ]);
+        'message' => 'An unexpected error occurred: ' . $exception->getMessage()
+    ];
+
+    echo json_encode($error_response);
     exit();
 });
 
@@ -62,18 +60,16 @@ register_shutdown_function(function() {
     if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_CORE_ERROR || $error['type'] === E_COMPILE_ERROR)) {
         error_log("🔴 [SHUTDOWN_HANDLER] Fatal error caught: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
         // Clear any buffered output to ensure clean JSON response
-        ob_clean();
+        @ob_clean();
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode([
+
+        $error_response = [
             'status' => 'error',
-            'message' => 'A fatal error occurred: ' . $error['message'],
-            'debug' => [
-                'error_type' => $error['type'],
-                'file' => $error['file'],
-                'line' => $error['line']
-            ]
-        ]);
+            'message' => 'A fatal error occurred: ' . $error['message']
+        ];
+
+        echo json_encode($error_response);
     }
 });
 
@@ -2492,9 +2488,34 @@ try {
         // Requires authorization for modifications
         error_log("🗑️ [DELETE_RECEIPT_CASCADE] ===== START DELETE RECEIPT CASCADE =====");
         error_log("🗑️ [DELETE_RECEIPT_CASCADE] Received action: delete_receipt_with_cascade");
-        error_log("🗑️ [DELETE_RECEIPT_CASCADE] JSON body: " . json_encode($json_body));
+
+        // Debug: Log the request data safely
+        try {
+            if ($json_body && is_array($json_body)) {
+                error_log("🗑️ [DELETE_RECEIPT_CASCADE] JSON body keys: " . implode(', ', array_keys($json_body)));
+                if (isset($json_body['receipt_id'])) {
+                    error_log("🗑️ [DELETE_RECEIPT_CASCADE] Receipt ID in body: " . $json_body['receipt_id']);
+                }
+            } else {
+                error_log("🗑️ [DELETE_RECEIPT_CASCADE] JSON body is not an array or is null");
+            }
+        } catch (Exception $logErr) {
+            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Error logging request data: " . $logErr->getMessage());
+        }
 
         try {
+            // Ensure we're inside a try block for all operations
+            if (!isset($conn) || !$conn) {
+                throw new Exception("Database connection not available");
+            }
+
+            // Verify connection is working
+            if (!$conn->ping()) {
+                throw new Exception("Database connection lost");
+            }
+
+            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Database connection verified");
+
             $auth = requireAuthForModification($action, 'receipts');
             error_log("🗑️ [DELETE_RECEIPT_CASCADE] Authorization passed for user");
 
@@ -2519,7 +2540,13 @@ try {
             if (!$conn->begin_transaction()) {
                 throw new Exception("Failed to start transaction: " . $conn->error);
             }
-            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Database transaction started");
+            error_log("🗑️ [DELETE_RECEIPT_CASCADE] Database transaction started successfully");
+
+            // Initialize variables to avoid undefined variable errors later
+            $receiptNumber = 'Unknown';
+            $invoiceId = null;
+            $paymentId = null;
+            $receiptAmount = 0;
 
             // Step 1: Fetch receipt details before deletion (for audit/response)
             $receipt_sql = "SELECT * FROM receipts WHERE id = $receiptId LIMIT 1";
@@ -2532,10 +2559,10 @@ try {
                 throw new Exception("Receipt not found with id: $receiptId");
             }
             $receipt = $receipt_result->fetch_assoc();
-            $receiptNumber = $receipt['receipt_number'];
-            $invoiceId = $receipt['invoice_id'];
-            $paymentId = $receipt['payment_id'];
-            $receiptAmount = $receipt['total_amount'] ?? 0;
+            $receiptNumber = $receipt['receipt_number'] ?? 'Unknown';
+            $invoiceId = $receipt['invoice_id'] ?? null;
+            $paymentId = $receipt['payment_id'] ?? null;
+            $receiptAmount = (float)($receipt['total_amount'] ?? 0);
             error_log("🗑️ [DELETE_RECEIPT_CASCADE] Step 1 SUCCESS - Found receipt: $receiptNumber (amount: $receiptAmount, invoiceId: $invoiceId, paymentId: $paymentId)");
 
             // Step 2: Delete receipt items (snapshot)
@@ -2676,20 +2703,23 @@ try {
             error_log("✅ [DELETE_RECEIPT_CASCADE] ===== COMPLETE - Successfully deleted receipt $receiptNumber (amount: $receiptAmount, linked to invoice: $invoiceId) =====");
 
             // Return success response
-            ob_clean(); // Clear any accidental output
+            @ob_clean(); // Clear any accidental output (suppress any warnings)
             http_response_code(200);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
+
+            $response_data = [
                 'status' => 'success',
                 'message' => "Receipt $receiptNumber and all related records deleted successfully",
                 'data' => [
-                    'receipt_id' => $receiptId,
-                    'receipt_number' => $receiptNumber,
+                    'receipt_id' => (int)$receiptId,
+                    'receipt_number' => (string)$receiptNumber,
                     'invoice_id' => $invoiceId,
                     'payment_id' => $paymentId,
-                    'amount_reversed' => $receiptAmount
+                    'amount_reversed' => (float)$receiptAmount
                 ]
-            ]);
+            ];
+
+            echo json_encode($response_data);
             exit();
 
         } catch (Exception $e) {
@@ -2698,24 +2728,35 @@ try {
             error_log("🔴 [DELETE_RECEIPT_CASCADE] Exception file: " . $e->getFile() . ", line: " . $e->getLine());
             error_log("🔴 [DELETE_RECEIPT_CASCADE] Stack trace: " . $e->getTraceAsString());
 
-            if ($conn) {
-                $conn->rollback();
-                error_log("🔴 [DELETE_RECEIPT_CASCADE] Transaction rolled back");
+            // Safely attempt rollback
+            if ($conn && is_object($conn)) {
+                try {
+                    $conn->rollback();
+                    error_log("🔴 [DELETE_RECEIPT_CASCADE] Transaction rolled back");
+                } catch (Exception $rollbackErr) {
+                    error_log("🔴 [DELETE_RECEIPT_CASCADE] Rollback failed: " . $rollbackErr->getMessage());
+                }
             }
 
             error_log("🔴 [DELETE_RECEIPT_CASCADE] ===== FAILED - Receipt deletion transaction failed: " . $e->getMessage() . " =====");
-            ob_clean(); // Clear any accidental output
-            http_response_code(400);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Receipt deletion failed: ' . $e->getMessage(),
-                'debug' => [
-                    'error_class' => get_class($e),
-                    'error_line' => $e->getLine(),
-                    'error_file' => $e->getFile()
-                ]
-            ]);
+
+            // Safely output error response
+            try {
+                @ob_clean(); // Clear any accidental output (suppress warnings)
+                http_response_code(400);
+                header('Content-Type: application/json; charset=utf-8');
+
+                $error_response = [
+                    'status' => 'error',
+                    'message' => 'Receipt deletion failed: ' . $e->getMessage()
+                ];
+
+                echo json_encode($error_response);
+            } catch (Exception $outputErr) {
+                error_log("🔴 [DELETE_RECEIPT_CASCADE] Failed to output error response: " . $outputErr->getMessage());
+                // As a last resort, output plain text error
+                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            }
             exit();
         }
     }
@@ -2735,14 +2776,24 @@ try {
         http_response_code(400);
     }
 
-    error_log("API Error [" . http_response_code() . "]: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+    error_log("🔴 API Error [" . http_response_code() . "]: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+    error_log("🔴 Stack trace: " . $e->getTraceAsString());
 
-    ob_clean(); // Clear any accidental output
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ]);
+    try {
+        @ob_clean(); // Clear any accidental output (suppress warnings)
+        header('Content-Type: application/json; charset=utf-8');
+
+        $error_response = [
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ];
+
+        echo json_encode($error_response);
+    } catch (Exception $outputErr) {
+        error_log("🔴 Failed to output error JSON: " . $outputErr->getMessage());
+        // As fallback, output JSON anyway
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
 
 }
 
