@@ -4,17 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Filter,
   Eye,
   Edit,
@@ -26,7 +34,8 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { downloadDeliveryNotePDF } from '@/utils/pdfGenerator';
@@ -41,12 +50,15 @@ export default function DeliveryNotes() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedDeliveryNote, setSelectedDeliveryNote] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<any>(null);
 
   // Database hooks
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
   const { data: deliveryNotes, isLoading, error, retry: retryDeliveryNotes } = useDeliveryNotes(currentCompany?.id);
   const updateDeliveryNote = useUpdateDeliveryNote();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const mappedDeliveryNotes = deliveryNotes?.map(mapDeliveryNoteForDisplay) || [];
 
@@ -142,6 +154,64 @@ export default function DeliveryNotes() {
       console.error('Error marking delivery note as delivered:', error);
       toast.error('Failed to mark delivery note as delivered');
     }
+  };
+
+  const handleDeleteClick = (deliveryNote: any) => {
+    setNoteToDelete(deliveryNote);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!noteToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      console.log('[Delete] Attempting to delete delivery note:', {
+        id: noteToDelete.id,
+        number: noteToDelete.delivery_note_number || noteToDelete.delivery_number
+      });
+
+      const response = await fetch('https://helixgeneralhardware.com/api.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('med_api_token') || ''}`
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          table: 'delivery_notes',
+          where: { id: noteToDelete.id }
+        })
+      });
+
+      console.log('[Delete] Response status:', response.status, response.statusText);
+
+      const result = await response.json();
+      console.log('[Delete] Response body:', result);
+
+      if (response.ok && result.status === 'success') {
+        const noteNumber = noteToDelete.delivery_note_number || noteToDelete.delivery_number;
+        toast.success(`Delivery note ${noteNumber} deleted successfully`);
+        retryDeliveryNotes();
+        setDeleteConfirmOpen(false);
+        setNoteToDelete(null);
+      } else {
+        const errorMessage = result.message || result.error || 'Unknown error';
+        console.error('[Delete] Error response:', errorMessage);
+        toast.error(`Failed to delete: ${errorMessage}`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[Delete] Exception:', errorMessage, error);
+      toast.error(`Delete failed: ${errorMessage}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setNoteToDelete(null);
   };
 
   const handleFilter = () => {
@@ -403,6 +473,14 @@ export default function DeliveryNotes() {
                             <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(note)}
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -428,6 +506,37 @@ export default function DeliveryNotes() {
         onSendEmail={handleSendEmail}
         onMarkDelivered={handleMarkDelivered}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Delivery Note</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete delivery note <span className="font-semibold">{noteToDelete?.delivery_note_number || noteToDelete?.delivery_number}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This action cannot be undone. The delivery note and all associated data will be permanently deleted.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelDelete}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

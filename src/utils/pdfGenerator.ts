@@ -759,24 +759,10 @@ export const generatePDF = (data: DocumentData, downloadAsFile: boolean = true) 
         ` : ''}
 
 
-        <!-- Bank Details (invoice only) -->
-        ${data.type === 'invoice' ? `
-        <div class="bank-details">
-          <div class="section-subtitle">Banking Details</div>
-          <div class="notes-content">Account Name: HELIX GENERAL HARDWARE • Please contact info@helixgeneralhardware.com for banking details</div>
-        </div>
-        ` : ''}
 
         <!-- Footer -->
         <div class="footer">
-          ${data.type === 'proforma' ? '<em>This is a proforma invoice and not a request for payment</em>' : ''}
-          ${data.type === 'delivery' ? '<em>This delivery note confirms the items delivered and includes detailed line items</em>' : ''}
-          ${data.type === 'receipt' ? '<em>This receipt serves as proof of payment received and includes detailed line items breakdown</em>' : ''}
-          ${data.type === 'remittance' ? '<em>This remittance advice details payments made to your account with itemized breakdown</em>' : ''}
-          ${data.type === 'lpo' ? '<em>This Local Purchase Order serves as an official request for goods/services with detailed items</em>' : ''}
-          ${data.type === 'invoice' ? '<em>This invoice includes detailed line items and billing information</em>' : ''}
-          ${data.type === 'quotation' ? '<em>This quotation includes detailed line items and pricing breakdown</em>' : ''}
-          ${data.type === 'statement' ? '<em>This statement includes detailed transaction history</em>' : ''}
+          <em>Thank you for trading with us</em>
         </div>
       </div>
     </body>
