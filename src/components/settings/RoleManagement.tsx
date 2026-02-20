@@ -186,35 +186,46 @@ export function RoleManagement() {
 
   const openEditDialog = (role: RoleDefinition) => {
     setEditingRole(role);
+    // Ensure permissions is always an array
+    const permissions = Array.isArray(role.permissions) ? role.permissions : [];
     setFormData({
       name: role.name,
       description: role.description || '',
-      permissions: role.permissions,
+      permissions,
       company_id: (role as any).company_id || currentCompanyId || profile?.company_id || '',
     });
     setEditDialogOpen(true);
   };
 
   const togglePermission = (permission: Permission) => {
-    setFormData((prev) => ({
-      ...prev,
-      permissions: prev.permissions.includes(permission)
-        ? prev.permissions.filter((p) => p !== permission)
-        : [...prev.permissions, permission],
-    }));
+    setFormData((prev) => {
+      // Ensure permissions is always an array
+      const permissions = Array.isArray(prev.permissions) ? prev.permissions : [];
+      return {
+        ...prev,
+        permissions: permissions.includes(permission)
+          ? permissions.filter((p) => p !== permission)
+          : [...permissions, permission],
+      };
+    });
   };
 
   const togglePermissionGroup = (group: Permission[]) => {
+    // Ensure permissions is always an array
+    const permissions = Array.isArray(formData.permissions) ? formData.permissions : [];
     const allIncluded = group.every((p) =>
-      formData.permissions.includes(p)
+      permissions.includes(p)
     );
 
-    setFormData((prev) => ({
-      ...prev,
-      permissions: allIncluded
-        ? prev.permissions.filter((p) => !group.includes(p))
-        : [...prev.permissions, ...group.filter((p) => !prev.permissions.includes(p))],
-    }));
+    setFormData((prev) => {
+      const prevPermissions = Array.isArray(prev.permissions) ? prev.permissions : [];
+      return {
+        ...prev,
+        permissions: allIncluded
+          ? prevPermissions.filter((p) => !group.includes(p))
+          : [...prevPermissions, ...group.filter((p) => !prevPermissions.includes(p))],
+      };
+    });
   };
 
   return (
