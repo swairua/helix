@@ -16,7 +16,6 @@ import {
   Phone,
   MapPin,
   Building2,
-  CreditCard,
   Calendar,
   FileText,
   DollarSign,
@@ -172,14 +171,6 @@ export function ViewCustomerModal({ open, onOpenChange, customer, onEdit, onCrea
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="font-medium">{formatCurrency(customer.credit_limit || 0)}</div>
-                  <div className="text-sm text-muted-foreground">Credit Limit</div>
-                </div>
-              </div>
-
               <div className="flex items-center space-x-3">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>

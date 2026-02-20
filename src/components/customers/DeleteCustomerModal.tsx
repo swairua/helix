@@ -111,17 +111,6 @@ export function DeleteCustomerModal({
                   <span className="font-medium">{customer.phone}</span>
                 </div>
               )}
-              {customer.credit_limit && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Credit Limit:</span>
-                  <span className="font-medium">
-                    {new Intl.NumberFormat('en-KE', {
-                      style: 'currency',
-                      currency: 'KES',
-                    }).format(customer.credit_limit)}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
