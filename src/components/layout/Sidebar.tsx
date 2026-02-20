@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -159,7 +159,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     );
   };
 
-  const isItemVisible = (item: SidebarItem): boolean => {
+  const isItemVisible = useCallback((item: SidebarItem): boolean => {
     // First check allowedRoles for backward compatibility (admin-only sections)
     if (item.allowedRoles && item.allowedRoles.length > 0) {
       if (!item.allowedRoles.includes(profile?.role || '')) {
@@ -182,17 +182,17 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
     // If no specific permission mapping, allow by default
     return true;
-  };
+  }, [role, profile?.role]);
 
-  const isItemActive = (href?: string) => {
+  const isItemActive = useCallback((href?: string) => {
     if (!href) return false;
     return location.pathname === href;
-  };
+  }, [location.pathname]);
 
-  const isParentActive = (children?: SidebarItem[]) => {
+  const isParentActive = useCallback((children?: SidebarItem[]) => {
     if (!children) return false;
     return children.some(child => isItemActive(child.href));
-  };
+  }, [isItemActive]);
 
   const renderSidebarItem = (item: SidebarItem) => {
     // Don't render if not visible to current user
