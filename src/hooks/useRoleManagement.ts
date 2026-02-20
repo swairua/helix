@@ -29,9 +29,26 @@ export const useRoleManagement = () => {
    * Normalize role permissions to ensure they're always arrays
    */
   const normalizeRole = (role: any): RoleDefinition => {
+    let permissions: any[] = [];
+
+    if (Array.isArray(role.permissions)) {
+      permissions = role.permissions;
+    } else if (typeof role.permissions === 'string') {
+      // Handle JSON string stored in database
+      try {
+        const parsed = JSON.parse(role.permissions);
+        permissions = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.error('Failed to parse permissions string:', role.permissions, e);
+        permissions = [];
+      }
+    } else if (role.permissions === null || role.permissions === undefined) {
+      permissions = [];
+    }
+
     return {
       ...role,
-      permissions: Array.isArray(role.permissions) ? role.permissions : [],
+      permissions,
     };
   };
 
@@ -63,6 +80,9 @@ export const useRoleManagement = () => {
       if (data && data.length > 0) {
         console.log('📋 First role object keys:', Object.keys(data[0]));
         console.log('📋 First role permissions field:', (data[0] as any).permissions);
+        console.log('📋 First role permissions type:', typeof (data[0] as any).permissions);
+        console.log('📋 Is permissions an array?', Array.isArray((data[0] as any).permissions));
+        console.log('📋 Full first role data:', JSON.stringify(data[0], null, 2));
       }
 
       // Normalize all roles to ensure permissions are arrays
@@ -151,14 +171,28 @@ export const useRoleManagement = () => {
         return { success: false, error: 'Cannot modify default roles' };
       }
 
-      const { error: updateError } = await supabase
+      console.log('🔄 Updating role:', roleId);
+      console.log('📤 Data being sent to Supabase:', data);
+      console.log('📤 Permissions to update:', data.permissions);
+      console.log('📤 Permissions type:', typeof data.permissions);
+      console.log('📤 Permissions JSON:', JSON.stringify(data.permissions));
+
+      const updateResponse = await supabase
         .from('roles')
         .update(data)
         .eq('id', roleId);
 
+      const { error: updateError, data: updateData, status } = updateResponse;
+
+      console.log('📥 Supabase response:', { error: updateError, data: updateData, status });
+
       if (updateError) {
+        console.error('❌ Supabase update error:', updateError);
         throw updateError;
       }
+
+      console.log('✅ Role updated successfully in database');
+      console.log('📥 Updated data:', updateData);
 
       // Log the role update with detailed permission changes
       try {

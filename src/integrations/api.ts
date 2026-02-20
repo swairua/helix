@@ -359,34 +359,75 @@ export const supabaseCompat = {
         chain.select(fields);
         return createChainableQuery(chain);
       },
-      insert: (data: any) => ({
-        select: () => ({
-          single: async () => {
-            const result = await getAdapterInstance().insert(table, data);
-            return { data: result.id, error: result.error };
+      insert: (data: any) => {
+        const insertChain = {
+          select: () => ({
+            single: async () => {
+              console.log(`➕ [INSERT COMPAT] Inserting into ${table}:`, {
+                dataKeys: Object.keys(data),
+              });
+              const result = await getAdapterInstance().insert(table, data);
+              console.log(`📤 [INSERT COMPAT] Insert result:`, { id: result.id, error: result.error });
+              return { data: result.id, error: result.error };
+            },
+          }),
+        };
+        return insertChain;
+      },
+      update: (data: any) => {
+        const updateChain = {
+          eq: (column: string, value: any) => {
+            // Return an object that is awaitable and has select/execute methods
+            const updatePromise = async () => {
+              console.log(`🔄 [UPDATE COMPAT] Executing update for ${table} with id=${value}:`, {
+                data,
+                dataKeys: Object.keys(data),
+              });
+              const result = await getAdapterInstance().update(table, String(value), data);
+              console.log(`📤 [UPDATE COMPAT] Update result:`, { error: result.error });
+              return { data: null, error: result.error };
+            };
+
+            return {
+              select: updatePromise,
+              execute: updatePromise,
+              // Make it thenable so it can be awaited directly
+              then: (onfulfilled?: any, onrejected?: any) => {
+                return updatePromise().then(onfulfilled, onrejected);
+              },
+              catch: (onrejected?: any) => {
+                return updatePromise().catch(onrejected);
+              },
+            };
           },
-        }),
-      }),
-      update: (data: any) => ({
-        eq: (column: string, value: any) => ({
-          select: async () => {
-            const result = await getAdapterInstance().update(table, String(value), data);
-            return { data: null, error: result.error };
+        };
+        return updateChain;
+      },
+      delete: () => {
+        const deleteChain = {
+          eq: (column: string, value: any) => {
+            // Return an object that is awaitable and has execute method
+            const deletePromise = async () => {
+              console.log(`🗑️ [DELETE COMPAT] Executing delete for ${table} with id=${value}`);
+              const result = await getAdapterInstance().delete(table, String(value));
+              console.log(`📤 [DELETE COMPAT] Delete result:`, { error: result.error });
+              return { data: null, error: result.error };
+            };
+
+            return {
+              execute: deletePromise,
+              // Make it thenable so it can be awaited directly
+              then: (onfulfilled?: any, onrejected?: any) => {
+                return deletePromise().then(onfulfilled, onrejected);
+              },
+              catch: (onrejected?: any) => {
+                return deletePromise().catch(onrejected);
+              },
+            };
           },
-          execute: async () => {
-            const result = await getAdapterInstance().update(table, String(value), data);
-            return { data: null, error: result.error };
-          },
-        }),
-      }),
-      delete: () => ({
-        eq: (column: string, value: any) => ({
-          execute: async () => {
-            const result = await getAdapterInstance().delete(table, String(value));
-            return { data: null, error: result.error };
-          },
-        }),
-      }),
+        };
+        return deleteChain;
+      },
     };
   },
 
