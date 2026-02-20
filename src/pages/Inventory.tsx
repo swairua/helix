@@ -214,8 +214,8 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-            <p className="text-muted-foreground">Inventory items</p>
+            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <p className="text-muted-foreground">Product items</p>
           </div>
         </div>
         <Card className="shadow-card">
@@ -249,8 +249,8 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-            <p className="text-muted-foreground">Loading inventory items...</p>
+            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <p className="text-muted-foreground">Loading product items...</p>
           </div>
         </div>
         <Card className="shadow-card">
@@ -273,8 +273,8 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-            <p className="text-muted-foreground">Error loading inventory</p>
+            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <p className="text-muted-foreground">Error loading products</p>
           </div>
         </div>
         <Card className="shadow-card">
@@ -304,7 +304,7 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
+            <h1 className="text-3xl font-bold text-foreground">Products</h1>
             <p className="text-muted-foreground">Checking permissions...</p>
           </div>
         </div>
@@ -323,8 +323,8 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-            <p className="text-muted-foreground">Manage stock levels and inventory items</p>
+            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <p className="text-muted-foreground">Manage stock levels and product items</p>
           </div>
         </div>
         <Card className="shadow-card">
@@ -348,9 +348,9 @@ export default function Inventory() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
+          <h1 className="text-3xl font-bold text-foreground">Products</h1>
           <p className="text-muted-foreground">
-            Manage stock levels and inventory items
+            Manage stock levels and product items
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -437,10 +437,10 @@ export default function Inventory() {
         </CardContent>
       </Card>
 
-      {/* Inventory Table */}
+      {/* Product Table */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>Inventory Items</CardTitle>
+          <CardTitle>Product Items</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -533,7 +533,7 @@ export default function Inventory() {
         </CardContent>
       </Card>
 
-      {/* Inventory Modals */}
+      {/* Product Modals */}
       <AddInventoryItemModal
         open={showAddModal}
         onOpenChange={setShowAddModal}

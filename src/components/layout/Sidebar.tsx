@@ -67,10 +67,10 @@ const sidebarItems: SidebarItem[] = [
     ]
   },
   {
-    title: 'Inventory',
+    title: 'Products',
     icon: Package,
     children: [
-      { title: 'Inventory', icon: Package, href: '/app/inventory' },
+      { title: 'Products', icon: Package, href: '/app/inventory' },
       { title: 'Stock Movements', icon: TrendingUp, href: '/app/stock-movements' }
     ]
   },
@@ -109,7 +109,7 @@ const sidebarItems: SidebarItem[] = [
     icon: BarChart3,
     children: [
       { title: 'Sales Reports', icon: BarChart3, href: '/app/reports/sales' },
-      { title: 'Inventory Reports', icon: Package, href: '/app/reports/inventory' },
+      { title: 'Product Reports', icon: Package, href: '/app/reports/inventory' },
       { title: 'Customer Statements', icon: FileSpreadsheet, href: '/app/reports/statements' },
       { title: 'Trading P&L', icon: TrendingUp, href: '/app/reports/trading-pl' },
       { title: 'Transport P&L', icon: Truck, href: '/app/reports/transport-pl' },

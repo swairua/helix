@@ -195,18 +195,18 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'edit_payment': 'Edit payments',
   'delete_payment': 'Delete payments',
 
-  // Inventory
-  'create_inventory': 'Create inventory items',
-  'view_inventory': 'View inventory',
-  'edit_inventory': 'Edit inventory items',
-  'delete_inventory': 'Delete inventory items',
-  'manage_inventory': 'Full inventory management',
+  // Products
+  'create_inventory': 'Create product items',
+  'view_inventory': 'View products',
+  'edit_inventory': 'Edit product items',
+  'delete_inventory': 'Delete product items',
+  'manage_inventory': 'Full product management',
 
   // Reports
   'view_reports': 'View reports',
   'export_reports': 'Export reports',
   'view_customer_reports': 'View customer reports',
-  'view_inventory_reports': 'View inventory reports',
+  'view_inventory_reports': 'View product reports',
   'view_sales_reports': 'View sales reports',
 
   // Customer

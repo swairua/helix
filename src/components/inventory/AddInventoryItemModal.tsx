@@ -194,14 +194,14 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
 
       await createProduct.mutateAsync(newProduct);
 
-      toast.success(`Product "${formData.name}" added to inventory successfully!`);
+      toast.success(`Product "${formData.name}" added successfully!`);
       onSuccess();
       onOpenChange(false);
       resetForm();
     } catch (error) {
-      console.error('Error adding inventory item:', error);
+      console.error('Error adding product:', error);
 
-      let errorMessage = 'Failed to add inventory item. Please try again.';
+      let errorMessage = 'Failed to add product. Please try again.';
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (error && typeof error === 'object') {
@@ -217,7 +217,7 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
         }
       }
 
-      toast.error(`Error adding inventory item: ${errorMessage}`);
+      toast.error(`Error adding product: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -248,10 +248,10 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Package className="h-5 w-5 text-primary" />
-            <span>Add New Inventory Item</span>
+            <span>Add New Product Item</span>
           </DialogTitle>
           <DialogDescription>
-            Add a new product to your inventory system
+            Add a new product to your system
           </DialogDescription>
         </DialogHeader>
 

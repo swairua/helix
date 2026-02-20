@@ -16,8 +16,8 @@ export const SIDEBAR_PERMISSION_MAP: Record<string, Permission | Permission[]> =
   'Payments': 'view_payment',
   'Remittance Advice': 'view_remittance',
 
-  // Inventory submenu items
-  'Inventory': 'view_inventory',
+  // Products submenu items
+  'Products': 'view_inventory',
   'Stock Movements': 'view_inventory',
 
   // Delivery Notes submenu items
@@ -33,12 +33,13 @@ export const SIDEBAR_PERMISSION_MAP: Record<string, Permission | Permission[]> =
   'Customers': 'view_customer',
 
   // Purchase Orders submenu items
+  'Purchase Orders': 'view_lpo',
   'Local Purchase Orders': 'view_lpo',
   'Suppliers': 'view_lpo',
 
   // Reports submenu items
   'Sales Reports': 'view_sales_reports',
-  'Inventory Reports': 'view_inventory_reports',
+  'Product Reports': 'view_inventory_reports',
   'Customer Statements': 'view_customer_reports',
   'Trading P&L': 'view_reports',
   'Transport P&L': 'view_reports',

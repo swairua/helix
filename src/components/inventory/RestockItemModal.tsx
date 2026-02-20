@@ -119,7 +119,7 @@ export function RestockItemModal({ open, onOpenChange, onSuccess, item }: Restoc
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Package className="h-5 w-5 text-warning" />
-            <span>Restock Inventory Item</span>
+            <span>Restock Product Item</span>
           </DialogTitle>
           <DialogDescription>
             Add stock for {item.name} ({item.sku})

@@ -203,7 +203,7 @@ export default function OptimizedInventory() {
 
   const handleRefresh = useCallback(() => {
     refetchProducts();
-    toast.success('Inventory refreshed');
+    toast.success('Products refreshed');
   }, [refetchProducts]);
 
   // Modal handlers
@@ -241,8 +241,8 @@ export default function OptimizedInventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-            <p className="text-muted-foreground">Loading inventory items...</p>
+            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <p className="text-muted-foreground">Loading products...</p>
           </div>
         </div>
         <div className="flex items-center justify-center h-64">
@@ -261,8 +261,8 @@ export default function OptimizedInventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-            <p className="text-muted-foreground">Error loading inventory</p>
+            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <p className="text-muted-foreground">Error loading products</p>
           </div>
           <Button onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -287,9 +287,9 @@ export default function OptimizedInventory() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
+          <h1 className="text-3xl font-bold text-foreground">Products</h1>
           <p className="text-muted-foreground">
-            Manage stock levels and inventory items
+            Manage stock levels and product items
             {productsData && ` (${productsData.totalCount} items)`}
           </p>
         </div>
@@ -407,11 +407,11 @@ export default function OptimizedInventory() {
         </CardContent>
       </Card>
 
-      {/* Inventory Table */}
+      {/* Product Table */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Inventory Items</span>
+            <span>Product Items</span>
             {loadingProducts && (
               <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
             )}
@@ -501,7 +501,7 @@ export default function OptimizedInventory() {
         </CardContent>
       </Card>
 
-      {/* Inventory Modals */}
+      {/* Product Modals */}
       <AddInventoryItemModal
         open={showAddModal}
         onOpenChange={setShowAddModal}
