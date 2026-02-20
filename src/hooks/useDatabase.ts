@@ -293,7 +293,21 @@ export function useCustomers(companyId?: string) {
     companyId ? { company_id: companyId } : undefined,
     [companyId]
   );
-  return useSelect('customers', filter);
+
+  const { data: rawData, isLoading, error, retry, loadingTimeout } = useSelect<any>('customers', filter);
+
+  // Normalize field names
+  const data = useMemo(() => {
+    if (!rawData || rawData.length === 0) return rawData;
+
+    return rawData.map((customer: any) => ({
+      ...customer,
+      customer_code: customer.customer_number || customer.customer_code || '',
+      is_active: customer.is_active === "1" || customer.is_active === true || customer.status === 'active'
+    }));
+  }, [rawData]);
+
+  return { data, isLoading, error, retry, loadingTimeout };
 }
 
 /**

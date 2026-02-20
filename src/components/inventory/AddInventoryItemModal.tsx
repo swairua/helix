@@ -37,7 +37,7 @@ import { CreateCategoryModalBasic } from '@/components/categories/CreateCategory
 interface AddInventoryItemModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (product: any) => void;
 }
 
 interface ProductCategory {
@@ -192,10 +192,10 @@ export function AddInventoryItemModal({ open, onOpenChange, onSuccess }: AddInve
         status: 'active'
       };
 
-      await createProduct.mutateAsync(newProduct);
+      const createdProduct = await createProduct.mutateAsync(newProduct);
 
       toast.success(`Product "${formData.name}" added successfully!`);
-      onSuccess();
+      onSuccess(createdProduct);
       onOpenChange(false);
       resetForm();
     } catch (error) {

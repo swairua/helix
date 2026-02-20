@@ -37,7 +37,7 @@ import { formatError } from '@/lib/utils';
 interface CreateCustomerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (customer: any) => void;
   companyId?: string;
 }
 
@@ -95,7 +95,7 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess, companyId: 
       const createdCode = created?.customer_code ?? created?.customer_number ? `CUST${String(created.customer_number).padStart(6, '0')}` : '';
       toast.success(`Customer ${created?.name || formData.name} created successfully${createdCode ? ` (${createdCode})` : ''}!`);
 
-      onSuccess();
+      onSuccess(created);
       onOpenChange(false);
 
       // Reset form
