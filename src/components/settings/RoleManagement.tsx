@@ -66,7 +66,7 @@ const PERMISSION_GROUPS: Record<string, Permission[]> = {
   'Credit Notes': ['create_credit_note', 'view_credit_note', 'edit_credit_note', 'delete_credit_note', 'export_credit_note'],
   'Proforma': ['create_proforma', 'view_proforma', 'edit_proforma', 'delete_proforma', 'export_proforma'],
   'Payments': ['create_payment', 'view_payment', 'edit_payment', 'delete_payment'],
-  'Inventory': ['create_inventory', 'view_inventory', 'edit_inventory', 'delete_inventory', 'manage_inventory'],
+  'Products': ['create_inventory', 'view_inventory', 'edit_inventory', 'delete_inventory', 'manage_inventory'],
   'Reports': ['view_reports', 'export_reports', 'view_customer_reports', 'view_inventory_reports', 'view_sales_reports'],
   'Customers': ['create_customer', 'view_customer', 'edit_customer', 'delete_customer'],
   'Delivery Notes': ['create_delivery_note', 'view_delivery_note', 'edit_delivery_note', 'delete_delivery_note'],

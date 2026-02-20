@@ -286,7 +286,7 @@ export function EditInventoryItemModal({ open, onOpenChange, onSuccess, item }: 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Edit className="h-5 w-5" />
-            Edit Inventory Item
+            Edit Product Item
           </DialogTitle>
           <DialogDescription>
             Update the details for {item?.name || 'this product'}
