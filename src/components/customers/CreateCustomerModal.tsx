@@ -49,7 +49,7 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess, companyId: 
     address: '',
     city: '',
     country: 'Kenya',
-    credit_limit: 100000,
+    credit_limit: 0,
     payment_terms: 0,
     is_active: true,
   });
@@ -106,7 +106,7 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess, companyId: 
         address: '',
         city: '',
         country: 'Kenya',
-        credit_limit: 100000,
+        credit_limit: 0,
         payment_terms: 0,
         is_active: true,
       });
@@ -261,19 +261,6 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess, companyId: 
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="credit_limit">Credit Limit (KES)</Label>
-                <Input
-                  id="credit_limit"
-                  type="number"
-                  value={formData.credit_limit}
-                  onChange={(e) => handleInputChange('credit_limit', parseFloat(e.target.value) || 0)}
-                  placeholder="100000"
-                  min="0"
-                  step="1000"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="payment_terms">Payment Terms (Days)</Label>
                 <Select
                   value={formData.payment_terms.toString()}
@@ -311,7 +298,6 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess, companyId: 
                 <h4 className="font-medium mb-2">Customer Preview</h4>
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Code: {generateCustomerCode()}</p>
-                  <p>Credit Limit: KES {formData.credit_limit.toLocaleString()}</p>
                   <p>Payment Terms: {formData.payment_terms === 0 ? 'Cash (Now)' : `${formData.payment_terms} days`}</p>
                   <p>Status: {formData.is_active ? 'Active' : 'Inactive'}</p>
                 </div>

@@ -28,13 +28,16 @@ import {
   Search,
   Calculator,
   Receipt,
-  Loader2
+  Loader2,
+  FileText
 } from 'lucide-react';
 import { useCustomers, useGenerateDocumentNumber, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { useOptimizedProductSearch, usePopularProducts } from '@/hooks/useOptimizedProducts';
-import { useCreateInvoiceWithItems } from '@/hooks/useQuotationItems';
+import { useCreateInvoiceWithItems, useCreateDirectReceiptWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { CreateCustomerModal } from '@/components/customers/CreateCustomerModal';
+import { AddInventoryItemModal } from '@/components/inventory/AddInventoryItemModal';
 
 interface InvoiceItem {
   id: string;
@@ -65,7 +68,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   );
   const [lpoNumber, setLpoNumber] = useState('');
   const [notes, setNotes] = useState('');
-  
+
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitProgress, setSubmitProgress] = useState<{
@@ -73,6 +76,11 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     current: number;
     total: number;
   } | null>(null);
+  const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [documentType, setDocumentType] = useState<'invoice' | 'receipt'>('invoice');
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
@@ -89,6 +97,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const { data: popularProducts } = usePopularProducts(currentCompany?.id, 10);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const createInvoiceWithItems = useCreateInvoiceWithItems();
+  const createDirectReceiptWithItems = useCreateDirectReceiptWithItems();
   const generateDocNumber = useGenerateDocumentNumber();
 
   // Get default tax rate
@@ -101,6 +110,21 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       setSelectedCustomerId(preSelectedCustomer.id);
     }
   }, [preSelectedCustomer, open]);
+
+  // Handle customer creation success
+  const handleCustomerCreated = (customer: any) => {
+    setSelectedCustomerId(String(customer.id));
+    setShowCreateCustomerModal(false);
+    toast.success(`Customer "${customer.name}" created and selected!`);
+  };
+
+  // Handle product creation success
+  const handleProductCreated = (product: any) => {
+    setShowAddProductModal(false);
+    toast.success(`Product "${product.name}" created successfully!`);
+    // Add the newly created product to the invoice
+    addItem(product);
+  };
 
   // Use optimized search results or popular products when no search term
   const displayProducts = searchProduct.trim() ? searchedProducts : popularProducts;
@@ -294,6 +318,14 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
       return;
     }
 
+    // Validate receipt payment amount
+    if (documentType === 'receipt') {
+      if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
+        toast.error('Please enter a valid payment amount');
+        return;
+      }
+    }
+
     // Validate required fields
     if (!currentCompany?.id) {
       toast.error('No company selected. Please ensure you are associated with a company.');
@@ -314,97 +346,154 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
 
     setIsSubmitting(true);
     setSubmitProgress({
-      step: 'Preparing invoice data...',
+      step: `Preparing ${documentType}...`,
       current: 1,
-      total: 4
+      total: documentType === 'receipt' ? 3 : 4
     });
 
     try {
-      // Log the selected customer for debugging
       const selectedCustomer = customers?.find(c => String(c.id) === selectedCustomerId);
-      console.log('🔍 Creating invoice with customer:', {
+      console.log(`🔍 Creating ${documentType} with customer:`, {
         customerId: selectedCustomerId,
         customerName: selectedCustomer?.name,
         customerFound: !!selectedCustomer,
         allCustomers: customers?.map(c => ({ id: c.id, name: c.name }))
       });
 
-      // Step 1: Generate invoice number
-      setSubmitProgress({
-        step: 'Generating invoice number...',
-        current: 1,
-        total: 4
-      });
+      if (documentType === 'receipt') {
+        // Create Receipt
+        setSubmitProgress({
+          step: 'Generating receipt number...',
+          current: 1,
+          total: 3
+        });
 
-      const invoiceNumber = await generateDocNumber.mutateAsync({
-        companyId: currentCompany.id,
-        type: 'invoice'
-      });
+        const receiptNumber = await generateDocNumber.mutateAsync({
+          companyId: currentCompany.id,
+          type: 'receipt'
+        });
 
-      // Step 2: Prepare invoice data
-      setSubmitProgress({
-        step: 'Preparing invoice data...',
-        current: 2,
-        total: 4
-      });
+        setSubmitProgress({
+          step: 'Preparing receipt data...',
+          current: 2,
+          total: 3
+        });
 
-      const invoiceData = {
-        company_id: currentCompany.id,
-        customer_id: selectedCustomerId,
-        invoice_number: invoiceNumber,
-        invoice_date: invoiceDate,
-        due_date: dueDate,
-        lpo_number: lpoNumber || null,
-        status: 'draft',
-        subtotal: subtotal,
-        tax_amount: taxAmount,
-        total_amount: totalAmount,
-        paid_amount: 0,
-        balance_due: balanceDue,
-        notes: notes,
-        created_by: profile?.id
-      };
+        const paymentData = {
+          payment_number: receiptNumber,
+          payment_date: invoiceDate,
+          amount: parseFloat(paymentAmount),
+          payment_method: paymentMethod,
+          reference_number: lpoNumber || null,
+          notes: notes || null,
+        };
 
-      const invoiceItems = items.map(item => ({
-        product_id: item.product_id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        discount_before_vat: item.discount_before_vat || 0,
-        tax_percentage: item.tax_percentage,
-        tax_amount: item.tax_amount,
-        tax_inclusive: item.tax_inclusive,
-        line_total: item.line_total
-      }));
+        const receiptItems = items.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_before_vat: item.discount_before_vat || 0,
+          tax_percentage: item.tax_percentage,
+          tax_amount: item.tax_amount,
+          tax_inclusive: item.tax_inclusive,
+          line_total: item.line_total
+        }));
 
-      console.log('🛒 CreateInvoiceModal - Prepared items for mutation:', {
-        itemsCount: items.length,
-        itemsInState: items,
-        mappedItems: invoiceItems,
-        firstItem: invoiceItems[0],
-        allFieldsPresent: invoiceItems[0] ? Object.keys(invoiceItems[0]) : []
-      });
+        setSubmitProgress({
+          step: `Creating receipt with ${items.length} items...`,
+          current: 3,
+          total: 3
+        });
 
-      // Step 3: Create invoice and items
-      setSubmitProgress({
-        step: `Creating invoice with ${items.length} items...`,
-        current: 3,
-        total: 4
-      });
+        await createDirectReceiptWithItems.mutateAsync({
+          payment: paymentData,
+          invoiceAmount: totalAmount,
+          subtotal: subtotal,
+          taxAmount: taxAmount,
+          companyId: currentCompany.id,
+          customerId: selectedCustomerId,
+          items: receiptItems
+        });
 
-      await createInvoiceWithItems.mutateAsync({
-        invoice: invoiceData,
-        items: invoiceItems
-      });
+        toast.success(`Receipt ${receiptNumber} created successfully!`);
+      } else {
+        // Create Invoice
+        setSubmitProgress({
+          step: 'Generating invoice number...',
+          current: 1,
+          total: 4
+        });
 
-      // Step 4: Finalizing
-      setSubmitProgress({
-        step: 'Finalizing invoice creation...',
-        current: 4,
-        total: 4
-      });
+        const invoiceNumber = await generateDocNumber.mutateAsync({
+          companyId: currentCompany.id,
+          type: 'invoice'
+        });
 
-      toast.success(`Invoice ${invoiceNumber} created successfully!`);
+        setSubmitProgress({
+          step: 'Preparing invoice data...',
+          current: 2,
+          total: 4
+        });
+
+        const invoiceData = {
+          company_id: currentCompany.id,
+          customer_id: selectedCustomerId,
+          invoice_number: invoiceNumber,
+          invoice_date: invoiceDate,
+          due_date: dueDate,
+          lpo_number: lpoNumber || null,
+          status: 'draft',
+          subtotal: subtotal,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+          paid_amount: 0,
+          balance_due: balanceDue,
+          notes: notes,
+          created_by: profile?.id
+        };
+
+        const invoiceItems = items.map(item => ({
+          product_id: item.product_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_before_vat: item.discount_before_vat || 0,
+          tax_percentage: item.tax_percentage,
+          tax_amount: item.tax_amount,
+          tax_inclusive: item.tax_inclusive,
+          line_total: item.line_total
+        }));
+
+        console.log('🛒 CreateInvoiceModal - Prepared items for mutation:', {
+          itemsCount: items.length,
+          itemsInState: items,
+          mappedItems: invoiceItems,
+          firstItem: invoiceItems[0],
+          allFieldsPresent: invoiceItems[0] ? Object.keys(invoiceItems[0]) : []
+        });
+
+        setSubmitProgress({
+          step: `Creating invoice with ${items.length} items...`,
+          current: 3,
+          total: 4
+        });
+
+        await createInvoiceWithItems.mutateAsync({
+          invoice: invoiceData,
+          items: invoiceItems
+        });
+
+        setSubmitProgress({
+          step: 'Finalizing invoice creation...',
+          current: 4,
+          total: 4
+        });
+
+        toast.success(`Invoice ${invoiceNumber} created successfully!`);
+      }
+
       onSuccess();
       onOpenChange(false);
       resetForm();
@@ -449,18 +538,53 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setNotes('');
     setItems([]);
     setSearchProduct('');
+    setPaymentAmount('');
+    setPaymentMethod('cash');
+    setDocumentType('invoice');
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Receipt className="h-5 w-5 text-primary" />
-            <span>Create New Invoice</span>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center space-x-2">
+              {documentType === 'invoice' ? (
+                <>
+                  <FileText className="h-5 w-5 text-primary" />
+                  <span>Create New Invoice</span>
+                </>
+              ) : (
+                <>
+                  <Receipt className="h-5 w-5 text-primary" />
+                  <span>Create New Receipt</span>
+                </>
+              )}
+            </DialogTitle>
+            <div className="flex gap-2">
+              <Button
+                variant={documentType === 'invoice' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDocumentType('invoice')}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Invoice
+              </Button>
+              <Button
+                variant={documentType === 'receipt' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDocumentType('receipt')}
+              >
+                <Receipt className="h-4 w-4 mr-1" />
+                Receipt
+              </Button>
+            </div>
+          </div>
           <DialogDescription>
-            Create a detailed invoice with multiple items for your customer
+            {documentType === 'invoice'
+              ? 'Create a detailed invoice with multiple items for your customer'
+              : 'Create a direct receipt with payment collection'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -474,7 +598,19 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
               <CardContent className="space-y-4">
                 {/* Customer Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="customer">Customer *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="customer">Customer *</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCreateCustomerModal(true)}
+                      className="h-auto p-1 text-xs text-primary hover:text-primary/80"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Create New
+                    </Button>
+                  </div>
                   <Select
                     value={selectedCustomerId}
                     onValueChange={(value) => {
@@ -511,9 +647,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                 </div>
 
                 {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${documentType === 'invoice' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <div className="space-y-2">
-                    <Label htmlFor="invoice_date">Invoice Date *</Label>
+                    <Label htmlFor="invoice_date">{documentType === 'invoice' ? 'Invoice' : 'Receipt'} Date *</Label>
                     <Input
                       id="invoice_date"
                       type="date"
@@ -521,26 +657,68 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                       onChange={(e) => setInvoiceDate(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="due_date">Due Date *</Label>
-                    <Input
-                      id="due_date"
-                      type="date"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                    />
-                  </div>
+                  {documentType === 'invoice' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="due_date">Due Date *</Label>
+                      <Input
+                        id="due_date"
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* LPO Number */}
+                {/* Payment Details for Receipts */}
+                {documentType === 'receipt' && (
+                  <div className="space-y-4 pt-2 border-t">
+                    <div className="space-y-2">
+                      <Label htmlFor="payment_method">Payment Method *</Label>
+                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="mpesa">M-Pesa</SelectItem>
+                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="cheque">Cheque</SelectItem>
+                          <SelectItem value="credit_card">Credit Card</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="payment_amount">Amount Received (KES) *</Label>
+                      <Input
+                        id="payment_amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="0.00"
+                      />
+                      {paymentAmount && (
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(parseFloat(paymentAmount))}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* LPO / Reference Number */}
                 <div className="space-y-2">
-                  <Label htmlFor="lpo_number">LPO Number (Optional)</Label>
+                  <Label htmlFor="lpo_number">
+                    {documentType === 'invoice' ? 'LPO Number' : 'Reference Number'} (Optional)
+                  </Label>
                   <Input
                     id="lpo_number"
                     type="text"
                     value={lpoNumber}
                     onChange={(e) => setLpoNumber(e.target.value)}
-                    placeholder="Enter LPO reference number"
+                    placeholder={documentType === 'invoice' ? 'Enter LPO reference number' : 'Enter reference number (e.g., transaction ID)'}
                   />
                 </div>
 
@@ -563,7 +741,19 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Add Products</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Add Products</CardTitle>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddProductModal(true)}
+                    className="h-auto p-1 text-xs text-primary hover:text-primary/80"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Create New
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -770,7 +960,16 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !selectedCustomerId || items.length === 0} className="min-w-32">
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              isSubmitting ||
+              !selectedCustomerId ||
+              items.length === 0 ||
+              (documentType === 'receipt' && (!paymentAmount || parseFloat(paymentAmount) <= 0))
+            }
+            className="min-w-32"
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -778,14 +977,36 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
               </>
             ) : (
               <>
-                <Receipt className="mr-2 h-4 w-4" />
-                Create Invoice
+                {documentType === 'invoice' ? (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Create Invoice
+                  </>
+                ) : (
+                  <>
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Create Receipt
+                  </>
+                )}
               </>
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
 
+      {/* Inline Customer Creation Modal */}
+      <CreateCustomerModal
+        open={showCreateCustomerModal}
+        onOpenChange={setShowCreateCustomerModal}
+        onSuccess={handleCustomerCreated}
+      />
+
+      {/* Inline Product Creation Modal */}
+      <AddInventoryItemModal
+        open={showAddProductModal}
+        onOpenChange={setShowAddProductModal}
+        onSuccess={handleProductCreated}
+      />
     </Dialog>
   );
 }
