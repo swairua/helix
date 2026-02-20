@@ -58,6 +58,13 @@ export const useRoleManagement = () => {
         throw fetchError;
       }
 
+      // Debug: Log the raw data to see what the API is returning
+      console.log('📊 Raw roles data from API:', data);
+      if (data && data.length > 0) {
+        console.log('📋 First role object keys:', Object.keys(data[0]));
+        console.log('📋 First role permissions field:', (data[0] as any).permissions);
+      }
+
       // Normalize all roles to ensure permissions are arrays
       const normalizedRoles = (data || []).map(normalizeRole);
       setRoles(normalizedRoles);
