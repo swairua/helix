@@ -55,7 +55,7 @@ export const useOptimizedCustomers = (
         .select(`
           id,
           company_id,
-          customer_code,
+          customer_number,
           name,
           email,
           phone,
@@ -78,7 +78,7 @@ export const useOptimizedCustomers = (
 
       // Apply search filter (server-side)
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,customer_code.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,customer_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
       }
 
       // Apply status filter
@@ -119,7 +119,10 @@ export const useOptimizedCustomers = (
       console.log(`✅ Customers loaded in ${(endTime - startTime).toFixed(2)}ms`);
 
       return {
-        customers: data || [],
+        customers: (data || []).map((customer: any) => ({
+          ...customer,
+          customer_code: customer.customer_number || ''
+        })),
         totalCount: count || 0,
         hasMore: count ? (page * pageSize) < count : false,
         currentPage: page

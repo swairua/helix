@@ -42,10 +42,9 @@ export const useOptimizedProductSearch = (companyId?: string, enabled: boolean =
           .select(`
             id,
             name,
-            product_code,
+            sku,
             unit_of_measure,
             unit_price,
-            selling_price,
             stock_quantity,
             category_id
           `)
@@ -55,7 +54,7 @@ export const useOptimizedProductSearch = (companyId?: string, enabled: boolean =
         // Add search filter if search term exists
         if (debouncedSearchTerm.trim()) {
           const searchPattern = `%${debouncedSearchTerm.trim()}%`;
-          productsQuery = productsQuery.or(`name.ilike.${searchPattern},product_code.ilike.${searchPattern}`);
+          productsQuery = productsQuery.or(`name.ilike.${searchPattern},sku.ilike.${searchPattern}`);
         }
 
         // Limit results for performance
@@ -86,14 +85,14 @@ export const useOptimizedProductSearch = (companyId?: string, enabled: boolean =
         });
 
         // Transform data to include category name and normalize price fields
-        const transformedData: ProductSearchResult[] = (products || []).map(product => ({
+        const transformedData: ProductSearchResult[] = (products || []).map((product: any) => ({
           id: product.id,
           name: product.name,
-          product_code: product.product_code,
+          product_code: product.sku || '',
           unit_of_measure: product.unit_of_measure || 'pieces',
-          unit_price: Number(product.selling_price || product.unit_price || 0),
+          unit_price: Number(product.unit_price || 0),
           // Ensure both price fields are available for compatibility
-          selling_price: Number(product.selling_price || product.unit_price || 0),
+          selling_price: Number(product.unit_price || 0),
           stock_quantity: Number(product.stock_quantity || 0),
           category_name: categoryMap.get(product.category_id) || 'Uncategorized'
         }));
@@ -154,10 +153,9 @@ export const usePopularProducts = (companyId?: string, limit: number = 20) => {
           .select(`
             id,
             name,
-            product_code,
+            sku,
             unit_of_measure,
             unit_price,
-            selling_price,
             stock_quantity,
             category_id
           `)
@@ -194,14 +192,14 @@ export const usePopularProducts = (companyId?: string, limit: number = 20) => {
         });
 
         // Transform data
-        const transformedData: ProductSearchResult[] = (products || []).map(product => ({
+        const transformedData: ProductSearchResult[] = (products || []).map((product: any) => ({
           id: product.id,
           name: product.name,
-          product_code: product.product_code,
+          product_code: product.sku || '',
           unit_of_measure: product.unit_of_measure || 'pieces',
-          unit_price: Number(product.selling_price || product.unit_price || 0),
+          unit_price: Number(product.unit_price || 0),
           // Ensure both price fields are available for compatibility
-          selling_price: Number(product.selling_price || product.unit_price || 0),
+          selling_price: Number(product.unit_price || 0),
           stock_quantity: Number(product.stock_quantity || 0),
           category_name: categoryMap.get(product.category_id) || 'Uncategorized'
         }));
@@ -236,10 +234,9 @@ export const useProductById = (productId?: string) => {
           .select(`
             id,
             name,
-            product_code,
+            sku,
             unit_of_measure,
             unit_price,
-            selling_price,
             stock_quantity,
             category_id,
             company_id
@@ -269,11 +266,11 @@ export const useProductById = (productId?: string) => {
         return {
           id: product.id,
           name: product.name,
-          product_code: product.product_code,
+          product_code: product.sku || '',
           unit_of_measure: product.unit_of_measure || 'pieces',
-          unit_price: Number(product.selling_price || product.unit_price || 0),
+          unit_price: Number(product.unit_price || 0),
           // Ensure both price fields are available for compatibility
-          selling_price: Number(product.selling_price || product.unit_price || 0),
+          selling_price: Number(product.unit_price || 0),
           stock_quantity: Number(product.stock_quantity || 0),
           category_name: categoryName
         } as ProductSearchResult;
@@ -388,7 +385,7 @@ export const useInventoryStats = (companyId?: string) => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('stock_quantity, minimum_stock_level, selling_price')
+          .select('stock_quantity, minimum_stock_level, unit_price')
           .eq('company_id', companyId)
           .eq('status', 'active');
 
@@ -407,7 +404,7 @@ export const useInventoryStats = (companyId?: string) => {
         data.forEach(product => {
           const stock = Number(product.stock_quantity || 0);
           const minStock = Number(product.minimum_stock_level || 0);
-          const price = Number(product.selling_price || product.unit_price || 0);
+          const price = Number(product.unit_price || 0);
 
           if (stock <= 0) stats.outOfStockItems++;
           else if (stock <= minStock) stats.lowStockItems++;
