@@ -171,14 +171,28 @@ export const useRoleManagement = () => {
         return { success: false, error: 'Cannot modify default roles' };
       }
 
-      const { error: updateError } = await supabase
+      console.log('🔄 Updating role:', roleId);
+      console.log('📤 Data being sent to Supabase:', data);
+      console.log('📤 Permissions to update:', data.permissions);
+      console.log('📤 Permissions type:', typeof data.permissions);
+      console.log('📤 Permissions JSON:', JSON.stringify(data.permissions));
+
+      const updateResponse = await supabase
         .from('roles')
         .update(data)
         .eq('id', roleId);
 
+      const { error: updateError, data: updateData, status } = updateResponse;
+
+      console.log('📥 Supabase response:', { error: updateError, data: updateData, status });
+
       if (updateError) {
+        console.error('❌ Supabase update error:', updateError);
         throw updateError;
       }
+
+      console.log('✅ Role updated successfully in database');
+      console.log('📥 Updated data:', updateData);
 
       // Log the role update with detailed permission changes
       try {
