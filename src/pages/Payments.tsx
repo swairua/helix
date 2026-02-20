@@ -191,7 +191,36 @@ export default function Payments() {
 
   // Removed inline PDF generation function - now using utility function
 
-  const filteredPayments = payments.filter(payment =>
+  // Enrich payments with customer and invoice info
+  const enrichedPayments = (payments || []).map(payment => {
+    // Find the primary invoice for this payment if available
+    const invoice = invoices.find(inv => inv.id === payment.invoice_id);
+
+    // Enrich payment allocations with invoice information
+    const allocations = (payment.payment_allocations || (invoice ? [{
+      invoice_id: invoice.id,
+      invoice_number: invoice.invoice_number,
+      allocated_amount: payment.amount,
+      invoice_total: invoice.total_amount
+    }] : [])).map(allocation => {
+      // Find the corresponding invoice to get invoice_number and other details
+      const allocInvoice = invoices.find(inv => inv.id === allocation.invoice_id || inv.invoice_number === allocation.invoice_number);
+      return {
+        ...allocation,
+        invoice_number: allocation.invoice_number || allocInvoice?.invoice_number,
+        invoice_date: allocInvoice?.invoice_date,
+        invoice_total: allocation.invoice_total || allocInvoice?.total_amount,
+      };
+    });
+
+    return {
+      ...payment,
+      customers: payment.customers || invoice?.customers,
+      payment_allocations: allocations
+    };
+  });
+
+  const filteredPayments = enrichedPayments.filter(payment =>
     (payment.customers?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (payment.payment_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     payment.payment_allocations?.some(alloc => (alloc.invoice_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()))
@@ -268,19 +297,19 @@ export default function Payments() {
   }
 
   // Calculate stats from live data
-  const totalReceivedToday = payments
+  const totalReceivedToday = enrichedPayments
     .filter(p => new Date(p.payment_date).toDateString() === new Date().toDateString())
-    .reduce((sum, p) => sum + (typeof p.amount === 'number' ? p.amount : 0), 0);
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-  const totalThisMonth = payments
+  const totalThisMonth = enrichedPayments
     .filter(p => {
       const paymentDate = new Date(p.payment_date);
       const now = new Date();
       return paymentDate.getMonth() === now.getMonth() && paymentDate.getFullYear() === now.getFullYear();
     })
-    .reduce((sum, p) => sum + (typeof p.amount === 'number' ? p.amount : 0), 0);
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-  const completedThisMonth = payments
+  const completedThisMonth = enrichedPayments
     .filter(p => {
       const paymentDate = new Date(p.payment_date);
       const now = new Date();
