@@ -480,12 +480,150 @@ export function useInvoices(companyId?: string) {
  * Hook to get payments
  * @param companyId - Optional company ID for filtering
  */
+/**
+ * Hook to get payments with related invoice and customer data
+ * Fetches payments and enriches them with invoice and customer information
+ * @param companyId - Optional company ID for filtering
+ */
 export function usePayments(companyId?: string) {
-  const filter = useMemo(() =>
-    companyId ? { company_id: companyId } : undefined,
-    [companyId]
-  );
-  return useSelect('payments', filter);
+  const [data, setData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const { db } = useDatabase();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchPaymentsWithDetails() {
+      try {
+        if (isMounted) {
+          setIsLoading(true);
+        }
+
+        console.log(`[usePayments] Fetching payments for company: ${companyId}`);
+
+        // Step 1: Fetch payments
+        const filter = companyId ? { company_id: companyId } : undefined;
+        const paymentsResult = await db.select<any>('payments', filter);
+
+        if (paymentsResult.error) {
+          throw paymentsResult.error;
+        }
+
+        const payments = paymentsResult.data || [];
+        console.log(`[usePayments] Found ${payments.length} payments`);
+
+        // Step 2: Fetch all invoices to get customer IDs and numbers
+        const invoicesResult = await db.select<any>('invoices', companyId ? { company_id: companyId } : undefined);
+        const invoiceMap = new Map();
+        const customerIds = new Set<string>();
+
+        if (invoicesResult.data) {
+          invoicesResult.data.forEach((invoice: any) => {
+            invoiceMap.set(invoice.id, invoice);
+            if (invoice.customer_id) customerIds.add(invoice.customer_id);
+          });
+        }
+        console.log(`[usePayments] Found ${invoiceMap.size} invoices for enrichment`);
+
+        // Step 3: Fetch all customers for enrichment
+        const customersResult = await db.select<any>('customers', companyId ? { company_id: companyId } : undefined);
+        const customerMap = new Map();
+        if (customersResult.data) {
+          customersResult.data.forEach((customer: any) => {
+            customerMap.set(customer.id, customer);
+          });
+        }
+        console.log(`[usePayments] Found ${customerMap.size} customers for enrichment`);
+
+        // Step 4: Fetch all payment allocations
+        // We use a broader filter here to ensure we get all allocations for our payments
+        const allocationsResult = await db.select<any>('payment_allocations', {});
+        const allocationsByPaymentMap = new Map();
+        if (allocationsResult.data) {
+          allocationsResult.data.forEach((alloc: any) => {
+            // Group allocations by payment_id
+            if (!allocationsByPaymentMap.has(alloc.payment_id)) {
+              allocationsByPaymentMap.set(alloc.payment_id, []);
+            }
+
+            // Find the corresponding invoice to get the number
+            const invoice = invoiceMap.get(alloc.invoice_id);
+            allocationsByPaymentMap.get(alloc.payment_id).push({
+              ...alloc,
+              invoice_number: invoice?.invoice_number || 'Unknown',
+              invoice_total: invoice?.total_amount || 0,
+              invoice_date: invoice?.invoice_date
+            });
+          });
+        }
+        console.log(`[usePayments] Found ${allocationsResult.data?.length || 0} total allocations`);
+
+        // Step 5: Enrich payments with customer and allocation details
+        const enrichedPayments = payments.map((payment: any) => {
+          const invoice = invoiceMap.get(payment.invoice_id);
+
+          // Customer can come from the invoice associated with the payment
+          const customer = invoice ? customerMap.get(invoice.customer_id) : null;
+
+          // Get allocations from the map or create a default one if payment is linked directly to an invoice
+          let allocations = allocationsByPaymentMap.get(payment.id) || [];
+
+          // Fallback: If no allocations found in the table but payment has an invoice_id,
+          // create a virtual allocation for UI display consistency
+          if (allocations.length === 0 && invoice) {
+            allocations = [{
+              payment_id: payment.id,
+              invoice_id: invoice.id,
+              amount: payment.amount,
+              invoice_number: invoice.invoice_number,
+              invoice_total: invoice.total_amount,
+              invoice_date: invoice.invoice_date
+            }];
+          }
+
+          return {
+            ...payment,
+            // These properties are expected by Payments.tsx and the reports
+            customer_id: invoice?.customer_id,
+            customers: customer || { name: 'Unknown Customer', email: null },
+            payment_allocations: allocations
+          };
+        });
+
+        if (isMounted) {
+          setData(enrichedPayments);
+          setError(null);
+        }
+      } catch (err) {
+        const error = err as Error;
+        console.error('[usePayments] Error fetching payments:', error);
+
+        if (isMounted) {
+          setError(error);
+          setData([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchPaymentsWithDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [db, companyId, retryCount]);
+
+  const retry = () => {
+    setRetryCount(prev => prev + 1);
+  };
+
+  return { data, isLoading, error, retry };
 }
 
 /**
